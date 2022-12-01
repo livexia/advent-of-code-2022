@@ -1,4 +1,3 @@
-use std::collections::BinaryHeap;
 use std::error::Error;
 use std::io::{self, Read, Write};
 
@@ -21,6 +20,7 @@ fn main() -> Result<()> {
             elves_calories[last] += line.parse::<i32>().unwrap();
         }
     }
+    elves_calories.sort_by(|a, b| b.cmp(&a));
 
     part1(&elves_calories)?;
     part2(&elves_calories)?;
@@ -28,25 +28,19 @@ fn main() -> Result<()> {
 }
 
 fn part1(elves_calories: &[i32]) -> Result<()> {
-    let max_calories = elves_calories.iter().max().unwrap();
     writeln!(
         io::stdout(),
         "How many total Calories is that Elf carrying? {}",
-        max_calories
+        elves_calories[0]
     )?;
     Ok(())
 }
 
 fn part2(elves_calories: &[i32]) -> Result<()> {
-    let mut elves_calories = BinaryHeap::from_iter(elves_calories.iter());
-    let mut max_calories = 0;
-    for _ in 0..3 {
-        max_calories += elves_calories.pop().unwrap();
-    }
     writeln!(
         io::stdout(),
         "How many Calories are those Elves carrying in total? {}",
-        max_calories
+        elves_calories[0..3].iter().sum::<i32>()
     )?;
     Ok(())
 }
