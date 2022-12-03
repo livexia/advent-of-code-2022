@@ -27,7 +27,7 @@ fn main() -> Result<()> {
         .collect();
 
     part1(&rucksacks)?;
-    part2()?;
+    part2(&rucksacks)?;
     Ok(())
 }
 
@@ -54,9 +54,33 @@ fn part1(rucksacks: &[Vec<usize>]) -> Result<()> {
         "What is the sum of the priorities of those item types? {}",
         sum
     )?;
-    todo!()
+    Ok(())
 }
 
-fn part2() -> Result<()> {
-    todo!()
+fn part2(rucksacks: &[Vec<usize>]) -> Result<()> {
+    let mut sum = 0;
+    for group in rucksacks.chunks(3) {
+        let mut dup = vec![(false, false, false); 53];
+        for &i in &group[0] {
+            dup[i].0 = true;
+        }
+        for &i in &group[1] {
+            dup[i].1 = true;
+        }
+        for &i in &group[2] {
+            dup[i].2 = true;
+        }
+        sum += dup
+            .iter()
+            .enumerate()
+            .filter(|(_, c)| c == &&(true, true, true))
+            .map(|(i, _)| i)
+            .sum::<usize>();
+    }
+    writeln!(
+        io::stdout(),
+        "What is the sum of the priorities of those item types? {}",
+        sum
+    )?;
+    Ok(())
 }
