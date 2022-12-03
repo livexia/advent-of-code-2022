@@ -9,7 +9,6 @@ type Result<T> = ::std::result::Result<T, Box<dyn Error>>;
 
 fn main() -> Result<()> {
     let mut input = String::new();
-    println!("{}", 'Z' as u8 - 'A' as u8 + 27);
     io::stdin().read_to_string(&mut input)?;
     let rucksacks: Vec<Vec<usize>> = input
         .lines()
@@ -28,6 +27,8 @@ fn main() -> Result<()> {
 
     part1(&rucksacks)?;
     part2(&rucksacks)?;
+    part1_with_bits(&input)?;
+    part2_with_bits(&input)?;
     Ok(())
 }
 
@@ -76,6 +77,63 @@ fn part2(rucksacks: &[Vec<usize>]) -> Result<()> {
             .filter(|(_, c)| c == &&(true, true, true))
             .map(|(i, _)| i)
             .sum::<usize>();
+    }
+    writeln!(
+        io::stdout(),
+        "What is the sum of the priorities of those item types? {}",
+        sum
+    )?;
+    Ok(())
+}
+
+fn str_to_u64(s: &str) -> u64 {
+    let mut result = 0u64;
+    for c in s.bytes() {
+        if c < 'a' as u8 {
+            result |= 1 << (c - 'A' as u8 + 27)
+        } else {
+            result |= 1 << (c - 'a' as u8 + 1)
+        }
+    }
+    result
+}
+
+fn u64_bits_count(mut num: u64) -> usize {
+    let mut i = 0;
+    let mut result = 0;
+    while i <= 52 {
+        if num & 1 == 1 {
+            result += i;
+        }
+        num >>= 1;
+        i += 1;
+    }
+    result
+}
+
+fn part1_with_bits(input: &str) -> Result<()> {
+    let mut sum = 0;
+    for line in input.lines() {
+        let l = line.len();
+        let s1 = str_to_u64(&line[0..l / 2]);
+        let s2 = str_to_u64(&line[l / 2..l]);
+        sum += u64_bits_count(s1 & s2);
+    }
+    writeln!(
+        io::stdout(),
+        "What is the sum of the priorities of those item types? {}",
+        sum
+    )?;
+    Ok(())
+}
+
+fn part2_with_bits(input: &str) -> Result<()> {
+    let mut sum = 0;
+    for lines in input.lines().collect::<Vec<_>>().chunks(3) {
+        let s1 = str_to_u64(&lines[0]);
+        let s2 = str_to_u64(&lines[1]);
+        let s3 = str_to_u64(&lines[2]);
+        sum += u64_bits_count(s1 & s2 & s3);
     }
     writeln!(
         io::stdout(),
