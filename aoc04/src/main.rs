@@ -54,6 +54,15 @@ fn part2(pairs: &[(Pair, Pair)]) -> Result<()> {
 
 fn fully_contain(p1: &Pair, p2: &Pair) -> bool {
     (p1.0 <= p2.0 && p1.1 >= p2.1) || (p1.0 >= p2.0 && p1.1 <= p2.1)
+
+    // let (mut p1, mut p2) = (p1, p2);
+    // if p1.0 > p2.0 {
+    //     (p1, p2) = (p2, p1);
+    // }
+    // if p1.0 == p2.0 && p1.1 < p2.1 {
+    //     (p1, p2) = (p2, p1);
+    // }
+    // p2.1 <= p1.1
 }
 
 fn overlap(p1: &Pair, p2: &Pair) -> bool {
