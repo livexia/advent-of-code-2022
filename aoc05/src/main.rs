@@ -32,7 +32,7 @@ fn main() -> Result<()> {
                 if [' ', '[', ']'].contains(&c) || c.is_numeric() {
                     continue;
                 } else {
-                    let index = (i - 1) / 4;
+                    let index = i / 4;
                     if stacks.len() <= index + 1 {
                         for _ in stacks.len()..=index {
                             stacks.push(vec![]);
@@ -81,6 +81,15 @@ fn part2(stacks: Vec<Vec<char>>, procedures: &[Vec<usize>]) -> Result<()> {
         let index = stacks[src].len() - count;
         let last = stacks[src].split_off(index);
         stacks[dest].extend(last.iter());
+
+        // with middle stack
+        // let mut temp = vec![];
+        // for _ in 0..count {
+        //     temp.push(stacks[src].pop().unwrap());
+        // }
+        // while let Some(c) = temp.pop() {
+        //     stacks[dest].push(c);
+        // }
     }
     let result: String = stacks.iter().map(|s| s.last().unwrap()).collect();
     writeln!(
