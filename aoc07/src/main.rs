@@ -20,14 +20,12 @@ fn with_stack(input: &str) -> Result<()> {
     let mut sizes = HashMap::new();
     let mut sub_dirs = HashMap::new();
     sizes.insert("/".to_string(), 0);
-    let mut pwd = vec!["/"];
+    let mut pwd = vec![];
     for line in input.lines() {
         if line.starts_with("$") {
             if line.starts_with("$ cd") {
                 let dir_name = line.split(" ").last().unwrap();
-                if dir_name == "/" {
-                    pwd = vec!["/"];
-                } else if dir_name == ".." {
+                if dir_name == ".." {
                     pwd.pop();
                 } else if dir_name == "." {
                     unimplemented!("unimplemented for path .")
