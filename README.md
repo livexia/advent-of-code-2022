@@ -2,6 +2,77 @@
 
 链接：[https://adventofcode.com/2022](https://adventofcode.com/2022)
 
+## Day 7
+
+### 
+
+- 这一题要求根据命令和结果构造存储结构，应该是不难的一题，但是我却花了两个小时
+- 输入包含两个部分，命令和命令输出结果
+- 只有两条命令 cd 和 ls 
+- cd 表示进入目录，这个命令无输出结果
+- ls 表示输出当前目录结构
+- ls 的命令输出结果中也包含两部分
+- 例如 dir a 表示存在子目录 a
+- 和 14848514 b.txt 表示存在文件 b.txt 大小为 14848514
+- 对输入的处理并不难，但是 cd 命令中存在两个特殊的情况， `cd /` 和 `cd ..` ，也就是说进入子目录后需要能够回到上层目录和根目录
+- 第一部分需要在确定目录结构之后，计算每一个目录的大小，再计算目录小于 1000000 的目录大小总和
+- 第二部分需要确定再删除了哪一个目录后能够空出需要的空间，所以同样需要计算每一个目录的大小。
+- 如果能够正确的表示目录结构那么就能够轻易的求解。
+- **构造树实际上有些大材小用，如果要计算目录大小，实际上可以使用栈完成。**
+
+### 构造树
+
+1. 初步构造 Dir 
+```rust
+struct Dir {
+    name: String,
+    sub_dir: HashMap<String, Dir>,
+    files: HashMap<String, File>,
+    size: Option<usize>,
+    parent: Option<Dir>,
+}
+```
+这时最初的文件夹思路，但是这样的做法存在严重的问题，问题就在于对上层文件夹的访问，如果将文件夹结构视为树，那么也就是子节点需要访问父节点，那么这样的 Dir 是无法满足需求的，虽然也有 parent 但是会导致所有权的问题，一般来说构造树的时候需要使用 `Rc<RefCell<Box<T>>>` 但是我并不想这样做，太复杂了。所以我参考了 https://rust-leipzig.github.io/architecture/2016/12/20/idiomatic-trees-in-rust/ 中构造树的方法。
+
+2. 增加 Dirs ，利用 Vec 和节点索引值来构造树结构
+```rust
+struct Dirs {
+    dirs: Vec<Dir>,
+    next_index: usize,
+}
+```
+
+3. 调整 Dir 为
+```rust
+struct Dir {
+    id: usize,
+    sub_dir: Vec<usize>,
+    table: HashMap<String, usize>,
+    files: HashMap<String, usize>,
+    parent: usize,
+}
+```
+- sub_dir 中只保存子目录的索引值
+- table 中保存子目录名称和索引值的对应
+- id 当前目录的索引值
+
+这样修改之后既可以实现子节点快速访问父节点，又可以保证树的结构
+
+
+4. 构造 File 
+
+File 较为简单，只需要包含文件名和大小，可以视为树的叶子节点。可以优化直接优化为 HashMap ，而不需要额外的结构，直接用哈希表存储文件名和大小即可。
+```rust
+struct File {
+    name: String,
+    size: usize
+}
+```
+
+### 栈
+
+- 
+
 ## Day 6
 
 - 依旧是不复杂的一题，对输入的处理也很简便

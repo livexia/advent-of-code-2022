@@ -11,7 +11,87 @@ type Result<T> = ::std::result::Result<T, Box<dyn Error>>;
 fn main() -> Result<()> {
     let mut input = String::new();
     io::stdin().read_to_string(&mut input)?;
+    with_tree(&input)?;
+    with_stack(&input)?;
+    Ok(())
+}
 
+fn with_stack(input: &str) -> Result<()> {
+    let mut sizes = HashMap::new();
+    let mut sub_dirs = HashMap::new();
+    sizes.insert("/".to_string(), 0);
+    let mut pwd = vec!["/"];
+    for line in input.lines() {
+        if line.starts_with("$") {
+            if line.starts_with("$ cd") {
+                let dir_name = line.split(" ").last().unwrap();
+                if dir_name == "/" {
+                    pwd = vec!["/"];
+                } else if dir_name == ".." {
+                    pwd.pop();
+                } else if dir_name == "." {
+                    unimplemented!("unimplemented for path .")
+                } else {
+                    pwd.push(dir_name);
+                }
+            } else if line.starts_with("$ ls") {
+                continue;
+            } else {
+                return err!("command not found: {:?}", line);
+            }
+        } else {
+            let path = pwd.join("/");
+            if line.starts_with("dir") {
+                sub_dirs
+                    .entry(path)
+                    .or_insert(vec![])
+                    .push(line.split_once(" ").unwrap().1);
+            } else {
+                *sizes.entry(path).or_insert(0) +=
+                    line.split_once(" ").unwrap().0.parse::<usize>().unwrap();
+            }
+        }
+    }
+    let total_size = compute_dir_size(&sub_dirs, &mut sizes, "/");
+
+    // Part 1
+    let result: usize = sizes.values().filter(|&&s| s <= 1000000).sum();
+    writeln!(
+        io::stdout(),
+        "What is the sum of the total sizes of those directories? {}",
+        result
+    )?;
+
+    // Part 2
+    let unused = 70000000 - total_size;
+    let result: usize = *sizes
+        .values()
+        .filter(|&&s| unused + s >= 30000000)
+        .min()
+        .unwrap();
+    writeln!(
+        io::stdout(),
+        "What is the total size of that directory? {}",
+        result
+    )?;
+    Ok(())
+}
+
+fn compute_dir_size(
+    sub_dirs: &HashMap<String, Vec<&str>>,
+    sizes: &mut HashMap<String, usize>,
+    path: &str,
+) -> usize {
+    if let Some(dirs) = sub_dirs.get(path) {
+        *sizes.entry(path.to_string()).or_insert(0) += dirs
+            .iter()
+            .map(|dir| compute_dir_size(sub_dirs, sizes, &format!("{}/{}", path, dir)))
+            .sum::<usize>()
+    }
+    *sizes.get(path).unwrap()
+}
+
+fn with_tree(input: &str) -> Result<()> {
     let mut dirs = Dirs::new();
     let mut cur_dir_index = 0;
     for line in input.lines() {
@@ -154,7 +234,7 @@ impl Dir {
             sub_dir: Vec::new(),
             table: HashMap::new(),
             files: HashMap::new(),
-            parent: parent,
+            parent,
         }
     }
 }
