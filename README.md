@@ -2,6 +2,10 @@
 
 链接：[https://adventofcode.com/2022](https://adventofcode.com/2022
 
+## Day 9
+
+- 
+
 ## Day 8
 
 - 今天这一题考虑过度，导致花了很长的时间，最后是直接暴力完成的，运行速度不慢
