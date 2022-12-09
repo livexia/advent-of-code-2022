@@ -15,8 +15,9 @@ fn main() -> Result<()> {
     let mut input = String::new();
     io::stdin().read_to_string(&mut input)?;
     let moves: Vec<Move> = input.lines().map(|l| l.parse()).collect::<Result<_>>()?;
+
     part1(&moves)?;
-    // part2()?;
+    part2(&moves)?;
     Ok(())
 }
 
@@ -33,47 +34,62 @@ fn part1(moves: &[Move]) -> Result<()> {
             visited.insert(tail);
         }
     }
-    let max_height = visited.iter().map(|(i, _)| i).max().unwrap() + 1;
-    let min_height = visited.iter().map(|(i, _)| i).min().unwrap() - 1;
-    let max_width = visited.iter().map(|(_, i)| i).max().unwrap() + 1;
-    let min_width = visited.iter().map(|(_, i)| i).min().unwrap() - 1;
-    for i in min_height..max_height {
-        for j in min_width..max_width {
-            if visited.contains(&(i, j)) {
-                print!("x");
-            } else {
-                print!("~")
+    writeln!(
+        io::stdout(),
+        "Part1:How many positions does the tail of the rope visit at least once? {}",
+        visited.len()
+    )?;
+    Ok(())
+}
+
+fn part2(moves: &[Move]) -> Result<()> {
+    let mut visited = HashSet::new();
+    let mut ropes = vec![(0, 0); 10];
+
+    for m in moves {
+        let steps = m.get_step();
+        let move_fn = m.move_fn();
+        for _ in 0..steps {
+            for i in 0..9 {
+                if i == 0 {
+                    // only head can alway move
+                    ropes[i] = move_fn(ropes[i]);
+                }
+                ropes[i + 1] = move_tail(ropes[i], ropes[i + 1]);
+                if i == 8 {
+                    visited.insert(ropes[i + 1]);
+                }
             }
         }
-        println!()
     }
-    dbg!(visited.len());
+    writeln!(
+        io::stdout(),
+        "Part2: How many positions does the tail of the rope visit at least once? {}",
+        visited.len()
+    )?;
     Ok(())
 }
 
 fn move_tail(head: Coord, tail: Coord) -> Coord {
     let d = distance(head, tail);
-    if d == 1 {
-        // touch
+    if d < 2 {
+        // touch or cover
         return tail;
-    } else if head.0 - tail.0 == 0 {
-        // same row
-        return (tail.0, (tail.1 + head.1) / 2);
-    } else if head.1 - tail.1 == 0 {
-        // same column
-        return ((tail.0 + head.0) / 2, tail.1);
+    } else if head.0 - tail.0 == 0 || head.1 - tail.1 == 0 {
+        // same row or column
+        return ((tail.0 + head.0) / 2, (tail.1 + head.1) / 2);
     } else if d == 2 {
         // diagonally
         return tail;
     } else if d > 2 {
-        // need move diagonally
+        // need move diagonally should be only one possible way
         for (dx, dy) in [(1, 1), (1, -1), (-1, 1), (-1, -1)] {
             let np = (tail.0 + dx, tail.1 + dy);
-            if distance(head, np) == 1 {
+            if distance(head, np) < d {
+                // make sure next postion will shorten the distance
                 return np;
             }
         }
-        dbg!(tail, head);
         unreachable!("move diagonally but no possible way");
     } else {
         unreachable!()
