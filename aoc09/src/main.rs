@@ -22,41 +22,30 @@ fn main() -> Result<()> {
 }
 
 fn part1(moves: &[Move]) -> Result<()> {
-    let mut visited = HashSet::new();
-    let mut head = (0, 0);
-    let mut tail = (0, 0);
-    for m in moves {
-        let steps = m.get_step();
-        let move_fn = m.move_fn();
-        for _ in 0..steps {
-            head = move_fn(head);
-            tail = move_tail(head, tail);
-            visited.insert(tail);
-        }
-    }
-    writeln!(
-        io::stdout(),
-        "Part1:How many positions does the tail of the rope visit at least once? {}",
-        visited.len()
-    )?;
+    move_rope(moves, 2)?;
     Ok(())
 }
 
 fn part2(moves: &[Move]) -> Result<()> {
+    move_rope(moves, 10)?;
+    Ok(())
+}
+
+fn move_rope(moves: &[Move], length: usize) -> Result<()> {
     let mut visited = HashSet::new();
-    let mut ropes = vec![(0, 0); 10];
+    let mut ropes = vec![(0, 0); length];
 
     for m in moves {
         let steps = m.get_step();
         let move_fn = m.move_fn();
         for _ in 0..steps {
-            for i in 0..9 {
+            for i in 0..length - 1 {
                 if i == 0 {
                     // only head can alway move
                     ropes[i] = move_fn(ropes[i]);
                 }
                 ropes[i + 1] = move_tail(ropes[i], ropes[i + 1]);
-                if i == 8 {
+                if i + 1 == length - 1 {
                     visited.insert(ropes[i + 1]);
                 }
             }
@@ -64,7 +53,8 @@ fn part2(moves: &[Move]) -> Result<()> {
     }
     writeln!(
         io::stdout(),
-        "Part2: How many positions does the tail of the rope visit at least once? {}",
+        "With rope length at {}: How many positions does the tail of the rope visit at least once? {}",
+        length,
         visited.len()
     )?;
     Ok(())
