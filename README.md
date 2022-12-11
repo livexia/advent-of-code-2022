@@ -2,6 +2,27 @@
 
 链接: [Advent of Code 2022](https://adventofcode.com/2022)
 
+## Day 11
+
+- 这道题目的题意有些复杂，不仔细阅读就会出错。输入依旧简单，根据输入构造 Monkey
+- 每一个猴子有两个复杂的动作，检查一个物品时会影响物品对应对担心值（修改），同时又根据新的担心值而决定将物品传递给下一个猴子
+- 每个猴子都有不同的修改担心值的方法，由三个部分组成，两个操作数，一个操作符。操作数可以是物品的原有担心值（old）或者是一个常数，操作符可以是乘号或者加号，对应乘法和加法。对两个操作数执行相应操作取得新的结果。
+- 传递目标由担心值是否能被一个常数整除而决定，如果能整除则传递给某一个猴子，不能则传递给了一个猴子。每一个猴子都有不同的整除常数，和两个不同的目标猴子。
+- 第一个部分中，每一次计算出新的担心值时对担心值除以三，这样可以保证担心值不会越界。
+- 但是在第二个部分中，担心值是不能除以三的，而且轮次达到了 10000 轮，所以一定会有越界的情况，需要判断题意自行降低担心值。
+- 因为传递是由每个猴子的整除常数确定的，所以要保证降低担心值的过程中不影响整除情况。
+- 传递的目标是完全由担心值和整除常数决定的，考虑整除常数 17 ，对于担心值 30 和 13 而言，下一个猴子的位置都是一致的。所以对于某一个猴子而言，可以将担心值降低到担心值对整除常数的余数，而不影响这个物品在这个猴子上的传递目标。
+- 能否直接取当前值对当前猴子整除常数的余数作为新的担心值？这是不正确的，考虑当前值为 34 ，整除常数为 17 ，那么余数就是 0 ，假设下一个猴子的操作为 old + 2 整除常数为 18。因为 34 % 17 == 0 而且更新担心值为 0 ，那么等到下一个猴子检查时，担心值被更新为 2 ，被 18 整除不为 0 。但是如果依旧是 34 ，担心值更新为 36 ，能够被 18 整除。可见直接取余数的方法是不正确的，物品传到了错误的猴子手上。
+- 可见在降低担心值时不能仅仅考虑当前猴子的情况，也要考虑其他可能有关联的猴子，因为猴子之间的传递链条复杂，大概率每一个物品都会出现在所有猴子手中，所以**在降低担心值时要考虑到所有猴子的情况**。
+- 考虑两个整除常数 2 和 3，对于担心值 8 而言，如果要担心值降低后不影响被这两个常数整除的结果，那么应该需要取 8 对 2 和 3 两个数的最小公倍数的余数，也就是 8 % lcm(2, 3) ，即 8 % 6。
+- 根据这个思路，在更新物品担心值时，对担心值取所有猴子整除常数的最小公倍数即可。这样就能够保证即使使用了 u64 的情况下也不会出现越界的情况。
+- **注意可以不使用最小公倍数（可以直接累积），只不过最小公倍数能更有效的降低担心值，同时在我的输入文件中，所有猴子的整除常数都是素数，所以最后使用的值就是所有整除常数的累积，可能是这个输入文件凑巧导致。**
+- 因为第二个部分的循环次数较多达到了 10000 次，所以在不引入这个优化时，即使使用 u128 或者更长的数据类型也有会导致溢出。但是即使在使用这个方法后，依旧需要使用 u64 才能保证不会有溢出。
+- 需要注意一个情况，在使用 --release 编译时，即使使用 u32 数据类型也不会产生溢出错误，但是计算结果是错误的，无论是否使用上述方法。也就是说在编译优化的过程中，编译器消除了溢出的问题，但是却导致了计算结果的错误。**这个问题不确定是编译器的 feature 还是 bug ？** 好像是个 feature ？
+    - https://stackoverflow.com/questions/71196238/why-does-repeated-multiplication-panic-due-to-overflow-in-debug-mode-when-it-ou
+    - https://doc.rust-lang.org/book/ch03-02-data-types.html#integer-overflow
+    > When you’re compiling in release mode with the --release flag, Rust does not include checks for integer overflow that cause panics. Instead, if overflow occurs, Rust performs two’s complement wrapping. In short, values greater than the maximum value the type can hold “wrap around” to the minimum of the values the type can hold. In the case of a u8, the value 256 becomes 0, the value 257 becomes 1, and so on. The program won’t panic, but the variable will have a value that probably isn’t what you were expecting it to have. Relying on integer overflow’s wrapping behavior is considered an error.
+
 ## Day 10
 
 - 每年都有的指令题来了，输入的处理依旧简单
