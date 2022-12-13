@@ -15,23 +15,23 @@ type Num = i32;
 fn main() -> Result<()> {
     let mut input = String::new();
     io::stdin().read_to_string(&mut input)?;
-    let pairs: Vec<Packet> = input
+    let packets: Vec<Packet> = input
         .lines()
         .filter(|l| !l.is_empty())
         .map(|l| l.parse())
         .collect::<Result<Vec<Packet>>>()?;
-    part1(&pairs)?;
-    part2(&pairs)?;
+    part1(&packets)?;
+    part2(&packets)?;
     Ok(())
 }
 
-fn part1(pairs: &[Packet]) -> Result<usize> {
+fn part1(packets: &[Packet]) -> Result<usize> {
     let start = Instant::now();
 
-    let sum: usize = pairs
+    let sum: usize = packets
         .chunks(2)
         .enumerate()
-        .filter(|(_, p)| p[0].le(&p[1]))
+        .filter(|(_, p)| p[0].lt(&p[1]))
         .map(|(i, _)| i + 1)
         .sum();
     writeln!(
@@ -43,18 +43,18 @@ fn part1(pairs: &[Packet]) -> Result<usize> {
     Ok(sum)
 }
 
-fn part2(pairs: &[Packet]) -> Result<usize> {
+fn part2(packets: &[Packet]) -> Result<usize> {
     let start = Instant::now();
-    let mut pairs: Vec<Packet> = pairs.to_vec();
-    pairs.sort();
+    let mut packets: Vec<Packet> = packets.to_vec();
+    packets.sort();
     let p1 = "[[2]]".parse().unwrap();
-    let index1 = match pairs.binary_search(&&p1) {
+    let index1 = match packets.binary_search(&&p1) {
         Err(n) => n,
         Ok(n) => n,
     };
-    pairs.insert(index1, p1);
+    packets.insert(index1, p1);
     let p2 = "[[6]]".parse().unwrap();
-    let index2 = match pairs.binary_search(&&p2) {
+    let index2 = match packets.binary_search(&&p2) {
         Err(n) => n,
         Ok(n) => n,
     };
@@ -68,7 +68,7 @@ fn part2(pairs: &[Packet]) -> Result<usize> {
     Ok(result)
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum Packet {
     List(Vec<Packet>),
     Integer(Num),
@@ -132,17 +132,17 @@ impl PartialOrd for Packet {
     }
 }
 
-impl PartialEq for Packet {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::List(l0), Self::List(r0)) => l0 == r0,
-            (Self::Integer(l0), Self::Integer(r0)) => l0 == r0,
-            _ => false,
-        }
-    }
-}
+// impl PartialEq for Packet {
+//     fn eq(&self, other: &Self) -> bool {
+//         match (self, other) {
+//             (Self::List(l0), Self::List(r0)) => l0 == r0,
+//             (Self::Integer(l0), Self::Integer(r0)) => l0 == r0,
+//             _ => false,
+//         }
+//     }
+// }
 
-impl Eq for Packet {}
+// impl Eq for Packet {}
 
 impl FromStr for Packet {
     type Err = Box<dyn Error>;
