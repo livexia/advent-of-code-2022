@@ -43,46 +43,62 @@ fn part2(mut cave: Cave) -> Result<()> {
 
 #[derive(Clone)]
 struct Cave {
-    grid: HashMap<Coord, Material>,
-    range_x: (usize, usize),
-    range_y: (usize, usize),
+    // grid: HashMap<Coord, Material>,
+    grid: Vec<Vec<Material>>,
+    // range_x: (usize, usize),
+    // range_y: (usize, usize),
     sand_src: Coord,
-    floor: usize,
+    max_y: usize,
+    min_x: usize,
+    max_x: usize,
 }
 
 impl Cave {
     fn new(paths: &[Vec<Coord>]) -> Self {
         use Material::*;
-        let mut cave = Cave {
-            grid: HashMap::new(),
-            range_x: (usize::MAX, 0),
-            range_y: (0, 0),
-            sand_src: Coord::new(500, 0),
-            floor: 0,
-        };
+
+        let mut max_y = 0;
+        let mut min_x = usize::MAX;
+        let mut max_x = 0;
+        for path in paths {
+            for coord in path {
+                max_y = max_y.max(coord.y);
+                min_x = min_x.min(coord.x);
+                max_x = max_x.max(coord.x);
+            }
+        }
+        max_y += 2;
+        min_x -= 2;
+        max_x += 2;
+        let min_x = min_x.min(500 - max_y);
+        let max_x = max_x.max(500 + max_y);
+        let mut grid = vec![vec![Air; max_y + 1]; max_x - min_x + 1];
+
         for path in paths {
             for route in path.windows(2) {
                 let (start, end) = route[0].range(&route[1]);
-                cave.update_cave_size(route[0]);
-                cave.update_cave_size(route[1]);
-
-                cave.floor = cave.range_y.1 + 2;
                 for x in start.x..=end.x {
                     for y in start.y..=end.y {
-                        cave.grid.insert(Coord::new(x, y), Rock);
+                        grid[x - min_x][y] = Rock
                     }
                 }
             }
         }
-        cave
+        Cave {
+            grid,
+            sand_src: Coord::new(500, 0),
+            max_y,
+            min_x,
+            max_x,
+        }
     }
 
-    fn update_cave_size(&mut self, c: Coord) {
-        self.range_x.0 = self.range_x.0.min(c.x);
-        self.range_x.1 = self.range_x.1.max(c.x);
-        self.range_y.0 = self.range_y.0.min(c.y);
-        self.range_y.1 = self.range_y.1.max(c.y);
-    }
+    // fn update_cave_size(&mut self, c: Coord) {
+    //     self.range_x.0 = self.range_x.0.min(c.x);
+    //     self.range_x.1 = self.range_x.1.max(c.x);
+    //     self.range_y.0 = self.range_y.0.min(c.y);
+    //     self.range_y.1 = self.range_y.1.max(c.y);
+    // }
 
     fn sand_fall_part1(&mut self) -> usize {
         let mut count = 0;
@@ -111,25 +127,22 @@ impl Cave {
     }
 
     fn is_blocked(&self, c: &Coord) -> bool {
-        if c.y == self.floor {
+        if c.y == self.max_y {
             return true;
         }
-        match self.grid.get(&c) {
-            Some(m) => match m {
-                Material::Air => false,
-                Material::Rock | Material::Sand => true,
-            },
-            None => false,
+        match self.grid[c.x - self.min_x][c.y] {
+            Material::Air => false,
+            Material::Rock | Material::Sand => true,
         }
     }
 
     fn sand_rest(&mut self, c: Coord) {
-        self.update_cave_size(c);
-        self.grid.insert(c, Material::Sand);
+        // self.update_cave_size(c);
+        self.grid[c.x - self.min_x][c.y] = Material::Sand
     }
 
     fn into_abyss(&self, c: &Coord) -> bool {
-        c.x > self.range_x.1 || c.y > self.range_y.1 || c.x < self.range_x.0
+        c.y > self.max_y - 3 || c.x < self.min_x || c.x >= self.max_x
     }
 
     fn sand_fall_part2(&mut self) -> usize {
@@ -168,29 +181,27 @@ impl Cave {
         let mut map = String::new();
         map.push_str(&format!(
             "x: {} -> {} (left -> right)\n",
-            self.range_x.0, self.range_x.1
+            self.min_x, self.max_x
         ));
-        map.push_str(&format!(
-            "y: {} -> {} (top -> bottom)\n",
-            self.range_y.0, self.range_y.1
-        ));
+        map.push_str(&format!("y: {} -> {} (top -> bottom)\n", 0, self.max_y));
         map.push_str(&format!(
             "sand sorce: ({}, {})\n",
             self.sand_src.x, self.sand_src.y
         ));
-        for y in self.range_y.0..=self.range_y.1 {
-            for x in self.range_x.0..=self.range_x.1 {
-                if x == self.sand_src.x && y == self.sand_src.y {
+        for y in 0..self.grid[0].len() {
+            for x in 0..self.grid.len() {
+                if x + self.min_x == self.sand_src.x && y == self.sand_src.y {
                     map.push('+');
                     continue;
                 }
-                match self.grid.get(&Coord::new(x, y)) {
-                    Some(m) => match m {
-                        Air => map.push('.'),
-                        Rock => map.push('#'),
-                        Sand => map.push('o'),
-                    },
-                    None => map.push('.'),
+                if y == self.max_y {
+                    map.push('#');
+                    continue;
+                }
+                match self.grid[x][y] {
+                    Air => map.push('.'),
+                    Rock => map.push('#'),
+                    Sand => map.push('o'),
                 }
             }
             map.push('\n');
@@ -284,7 +295,8 @@ mod tests {
         println!("{}", part1_cave.draw_cave());
 
         let mut part2_cave = cave.clone();
-        assert_eq!(93, part2_cave.sand_fall_part2());
+        let r = part2_cave.sand_fall_part2();
         println!("{}", part2_cave.draw_cave());
+        assert_eq!(93, r);
     }
 }
