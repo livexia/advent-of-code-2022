@@ -1,4 +1,5 @@
 use lazy_static::lazy_static;
+use std::collections::HashSet;
 use std::error::Error;
 use std::io::{self, Read, Write};
 use std::time::Instant;
@@ -21,6 +22,8 @@ fn main() -> Result<()> {
 
     part1(&sensors, 2000000)?;
     part2(&sensors, 4000000)?;
+    part1_with_interval(&sensors, 2000000)?;
+    part2_with_interval(&sensors, 4000000)?;
     Ok(())
 }
 
@@ -67,6 +70,59 @@ fn part2(sensors: &[Sensor], max: CoordType) -> Result<CoordType> {
     Ok(result)
 }
 
+fn part1_with_interval(sensors: &[Sensor], y: CoordType) -> Result<CoordType> {
+    let start = Instant::now();
+    let result = intervals_at(sensors, y)
+        .0
+        .iter()
+        .map(|&(start, end)| end - start + 1)
+        .sum::<CoordType>()
+        - sensors
+            .iter()
+            .map(|s| s.beacon)
+            .filter(|b| b.1 == y)
+            .collect::<HashSet<_>>()
+            .len() as CoordType;
+    writeln!(io::stdout(), "Part1 with interval: {}", result)?;
+    writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
+    Ok(result)
+}
+
+fn part2_with_interval(sensors: &[Sensor], max: CoordType) -> Result<CoordType> {
+    let start = Instant::now();
+    let mut result = 0;
+    let mut y = 0;
+    while y <= max {
+        let (intervals, temp) = intervals_at(sensors, y);
+        if intervals.len() > 1 {
+            result = y + 4000000 * (intervals[0].1 + 1) / 2;
+            break;
+        }
+        y += (temp + 1) / 2;
+    }
+    writeln!(io::stdout(), "Part2 with interval: {}", result)?;
+    writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
+    Ok(result)
+}
+
+fn intervals_at(sensors: &[Sensor], y: CoordType) -> (Vec<(CoordType, CoordType)>, CoordType) {
+    let mut raw: Vec<_> = sensors.iter().filter_map(|s| s.interval_at(y)).collect();
+    raw.sort();
+    let mut intervals = vec![raw[0]];
+    let mut min_overlap = CoordType::MAX;
+    for &interval in &raw[1..] {
+        let last = intervals.last_mut().unwrap();
+        if interval.0 > last.1 + 1 {
+            min_overlap = 0;
+            intervals.push(interval)
+        } else {
+            min_overlap = min_overlap.min(last.1 - interval.0 + 1);
+            last.1 = last.1.max(interval.1)
+        }
+    }
+    (intervals, min_overlap)
+}
+
 #[derive(Debug)]
 struct Sensor {
     coord: Coord,
@@ -109,6 +165,15 @@ impl Sensor {
         let y1 = self.closest_dis - (x - self.coord.0).abs() + self.coord.1;
         let y2 = -(self.closest_dis - (x - self.coord.0).abs()) + self.coord.1;
         (x, y1.max(y2))
+    }
+
+    fn interval_at(&self, y: CoordType) -> Option<(CoordType, CoordType)> {
+        if (y - self.coord.1).abs() > self.closest_dis {
+            return None;
+        }
+        let x1 = self.closest_dis - (y - self.coord.1).abs() + self.coord.0;
+        let x2 = -(self.closest_dis - (y - self.coord.1).abs()) + self.coord.0;
+        Some((x1.min(x2), x1.max(x2)))
     }
 }
 
@@ -155,7 +220,7 @@ mod tests {
 
     #[test]
     fn example_input() {
-        use crate::{parse_report, part1, part2};
+        use crate::{parse_report, part1, part1_with_interval, part2, part2_with_interval};
 
         let input = "Sensor at x=2, y=18: closest beacon is at x=-2, y=15
         Sensor at x=9, y=16: closest beacon is at x=10, y=16
@@ -178,6 +243,8 @@ mod tests {
         assert_eq!(sensors[6].could_be_beacon((3, 10)), false);
         assert_eq!(sensors[6].could_be_beacon((8, 16)), false);
         assert_eq!(26, part1(&sensors, 10).unwrap());
+        assert_eq!(26, part1_with_interval(&sensors, 10).unwrap());
         assert_eq!(56000011, part2(&sensors, 20).unwrap());
+        assert_eq!(56000011, part2_with_interval(&sensors, 20).unwrap());
     }
 }
