@@ -30,9 +30,8 @@ fn part1(sensors: &[Sensor], y: CoordType) -> Result<CoordType> {
     let max_x = sensors.iter().map(|s| s.max_x()).max().unwrap();
     let result = (min_x..=max_x)
         .filter(|&x| {
-            let c = (x, y);
             // a position isn't a beacon for a sensor then it must not be a beacon
-            sensors.iter().any(|s| !s.could_be_beacon(c))
+            sensors.iter().any(|s| !s.could_be_beacon((x, y)))
         })
         .count();
     writeln!(io::stdout(), "Part1: {}", result)?;
@@ -44,11 +43,11 @@ fn part2(sensors: &[Sensor], max: CoordType) -> Result<CoordType> {
     let start = Instant::now();
     let mut result = 0;
     let mut y = -1;
-    let mut flag;
-    while y <= max {
+    while y <= max && result == 0 {
         y += 1;
         let mut x = 0;
-        while x <= max {
+        let mut flag;
+        while x <= max && result == 0 {
             flag = false;
             for s in sensors {
                 if !s.could_be_beacon((x, y)) {
@@ -59,15 +58,13 @@ fn part2(sensors: &[Sensor], max: CoordType) -> Result<CoordType> {
             }
             if !flag {
                 result = x * 4000000 + y;
-                y = max + 1;
-                break;
             }
         }
     }
 
     writeln!(io::stdout(), "Part2: {}", result)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
-    Ok(result as CoordType)
+    Ok(result)
 }
 
 #[derive(Debug)]
