@@ -221,43 +221,33 @@ fn dfs_part2(
                             + pressure.1 * (time_limit - time.1),
                     )
                 } else {
-                    if d0 + time.0 > time_limit {
-                        let mut new_opened = opened.clone();
-                        new_opened |= 1 << next1;
-                        result = result.max(
-                            total_pressure.0
-                                + pressure.0 * (time_limit - time.0)
-                                + dfs(
-                                    memorization,
-                                    closed,
-                                    new_opened,
-                                    valves,
-                                    next1,
-                                    total_pressure.1 + pressure.1 * d1,
-                                    pressure.1 + valves[next1].flow_rate,
-                                    time.1 + d1,
-                                    time_limit,
-                                ),
-                        );
-                    } else if d1 + time.1 > time_limit {
-                        let mut new_opened = opened.clone();
-                        new_opened |= 1 << next0;
-                        result = result.max(
-                            total_pressure.1
-                                + pressure.1 * (time_limit - time.1)
-                                + dfs(
-                                    memorization,
-                                    closed,
-                                    new_opened,
-                                    valves,
-                                    next0,
-                                    total_pressure.0 + pressure.0 * d0,
-                                    pressure.0 + valves[next0].flow_rate,
-                                    time.0 + d0,
-                                    time_limit,
-                                ),
-                        );
-                    }
+                    let (total_pressure, pressure, time, d0) = if d0 + time.0 > d1 + time.1 {
+                        (
+                            rev_tuple(total_pressure),
+                            rev_tuple(pressure),
+                            rev_tuple(time),
+                            d1,
+                        )
+                    } else {
+                        (total_pressure, pressure, time, d0)
+                    };
+                    let mut new_opened = opened.clone();
+                    new_opened |= 1 << next0;
+                    result = result.max(
+                        total_pressure.1
+                            + pressure.1 * (time_limit - time.1)
+                            + dfs(
+                                memorization,
+                                closed,
+                                new_opened,
+                                valves,
+                                next0,
+                                total_pressure.0 + pressure.0 * d0,
+                                pressure.0 + valves[next0].flow_rate,
+                                time.0 + d0,
+                                time_limit,
+                            ),
+                    );
                 }
             }
         }
@@ -267,20 +257,19 @@ fn dfs_part2(
     result
 }
 
+fn rev_tuple(t: (usize, usize)) -> (usize, usize) {
+    (t.1, t.0)
+}
+
 #[derive(Debug)]
 struct Valve {
-    index: usize,
     flow_rate: usize,
     dest: Vec<usize>,
 }
 
 impl Valve {
-    fn new(index: usize, flow_rate: usize, dest: Vec<usize>) -> Self {
-        Self {
-            index,
-            flow_rate,
-            dest,
-        }
+    fn new(flow_rate: usize, dest: Vec<usize>) -> Self {
+        Self { flow_rate, dest }
     }
 }
 
@@ -325,7 +314,7 @@ fn parse_input(input: &str) -> Result<(Vec<Valve>, usize, HashMap<&str, usize>)>
                         .iter()
                         .map(|n| get_id(n, &mut valves_index, &mut index))
                         .collect();
-                    valves[id] = Some(Valve::new(id, rate, dest));
+                    valves[id] = Some(Valve::new(rate, dest));
                 }
             }
         }
