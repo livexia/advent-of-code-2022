@@ -16,7 +16,7 @@ fn main() -> Result<()> {
     let (valves, aa_id, _) = parse_input(&input)?;
 
     part1(&valves, aa_id)?;
-    // part2()?;
+    part2(&valves, aa_id)?;
     Ok(())
 }
 
@@ -35,9 +35,42 @@ fn part1(valves: &[Valve], aa_id: usize) -> Result<usize> {
         .filter(|(_, v)| v.flow_rate > 0)
         .map(|(i, _)| i)
         .collect();
-    let total_pressure = dfs(&memorization, &closed, vec![], valves, aa_id, 0, 0, 0);
+    let total_pressure = dfs(&memorization, &closed, vec![], valves, aa_id, 0, 0, 0, 30);
 
     writeln!(io::stdout(), "Part1: {:?}", total_pressure)?;
+    writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
+    Ok(total_pressure)
+}
+
+fn part2(valves: &[Valve], aa_id: usize) -> Result<usize> {
+    let start = Instant::now();
+
+    let mut memorization = vec![vec![usize::MAX; valves.len()]; valves.len()];
+    for i in 0..valves.len() {
+        for j in 0..valves.len() {
+            shortest_dis_bfs(&mut memorization, &valves, i, j);
+        }
+    }
+    let mut closed: Vec<usize> = valves
+        .iter()
+        .enumerate()
+        .filter(|(_, v)| v.flow_rate > 0)
+        .map(|(i, _)| i)
+        .collect();
+    closed.sort_by(|&id1, &id2| valves[id2].flow_rate.cmp(&valves[id1].flow_rate));
+    let total_pressure = dfs_part2(
+        &memorization,
+        &closed,
+        vec![],
+        valves,
+        (aa_id, aa_id),
+        (0, 0),
+        (0, 0),
+        (0, 0),
+        26,
+    );
+
+    writeln!(io::stdout(), "Part2: {:?}", total_pressure)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(total_pressure)
 }
@@ -83,9 +116,10 @@ fn dfs(
     total_pressure: usize,
     pressure: usize,
     time: usize,
+    time_limit: usize,
 ) -> usize {
     if opened.len() == closed.len() {
-        return total_pressure + (30 - time) * pressure;
+        return total_pressure + (time_limit - time) * pressure;
     }
     let result = closed
         .iter()
@@ -94,8 +128,8 @@ fn dfs(
                 let mut new_opend = opened.clone();
                 new_opend.push(next);
                 let d = memorization[id][next] + 1;
-                if time + d > 30 {
-                    total_pressure + (30 - time) * pressure
+                if time + d > time_limit {
+                    total_pressure + (time_limit - time) * pressure
                 } else {
                     dfs(
                         memorization,
@@ -106,6 +140,7 @@ fn dfs(
                         total_pressure + pressure * d,
                         pressure + valves[next].flow_rate,
                         time + d,
+                        time_limit,
                     )
                 }
             } else {
@@ -114,6 +149,123 @@ fn dfs(
         })
         .max()
         .unwrap();
+    result
+}
+
+fn dfs_part2(
+    memorization: &[Vec<usize>],
+    closed: &[usize],
+    opened: Vec<usize>,
+    valves: &[Valve],
+    id: (usize, usize),
+    total_pressure: (usize, usize),
+    pressure: (usize, usize),
+    time: (usize, usize),
+    time_limit: usize,
+) -> usize {
+    if opened.len() == closed.len() {
+        if total_pressure.0
+            + total_pressure.1
+            + (time_limit - time.0) * pressure.0
+            + (time_limit - time.1) * pressure.1
+            == 1701
+        {
+            println!("{:?}", opened);
+        }
+        return total_pressure.0
+            + total_pressure.1
+            + (time_limit - time.0) * pressure.0
+            + (time_limit - time.1) * pressure.1;
+    }
+    let mut result = 0;
+
+    let l = closed.len();
+    for id1 in 0..l {
+        let next1 = closed[id1];
+        for id2 in 0..l {
+            if id.0 == 23 {
+                println!("++++ {}", result);
+            }
+            let next2 = closed[id2];
+            if next1 == next2 {
+                continue;
+            }
+            if opened.contains(&next1) || opened.contains(&next2) {
+                continue;
+            }
+            let d1 = memorization[id.0][next1] + 1;
+            let d2 = memorization[id.1][next2] + 1;
+            if time.0 + d1 <= time_limit && time.1 + d2 <= time_limit {
+                let mut new_opened = opened.clone();
+                new_opened.push(next1);
+                new_opened.push(next2);
+                result = result.max(dfs_part2(
+                    memorization,
+                    closed,
+                    new_opened,
+                    valves,
+                    (next1, next2),
+                    (
+                        total_pressure.0 + d1 * pressure.0,
+                        total_pressure.1 + d2 * pressure.1,
+                    ),
+                    (
+                        pressure.0 + valves[next1].flow_rate,
+                        pressure.1 + valves[next2].flow_rate,
+                    ),
+                    (time.0 + d1, time.1 + d2),
+                    time_limit,
+                ));
+            } else {
+                if d1 + time.0 > time_limit && d2 + time.1 > time_limit {
+                    result = result.max(
+                        total_pressure.0
+                            + total_pressure.1
+                            + pressure.0 * (time_limit - time.0)
+                            + pressure.1 * (time_limit - time.1),
+                    )
+                } else {
+                    if d1 + time.0 > time_limit {
+                        let mut new_opened = opened.clone();
+                        new_opened.push(next2);
+                        result = result.max(
+                            total_pressure.0
+                                + pressure.0 * (time_limit - time.0)
+                                + dfs(
+                                    memorization,
+                                    closed,
+                                    new_opened,
+                                    valves,
+                                    next2,
+                                    total_pressure.1,
+                                    pressure.1,
+                                    time.1,
+                                    time_limit,
+                                ),
+                        );
+                    } else if d2 + time.1 > time_limit {
+                        let mut new_opened = opened.clone();
+                        new_opened.push(next1);
+                        result = result.max(
+                            total_pressure.1
+                                + pressure.1 * (time_limit - time.1)
+                                + dfs(
+                                    memorization,
+                                    closed,
+                                    new_opened,
+                                    valves,
+                                    next1,
+                                    total_pressure.0,
+                                    pressure.0,
+                                    time.0,
+                                    time_limit,
+                                ),
+                        );
+                    }
+                }
+            }
+        }
+    }
     result
 }
 
@@ -205,10 +357,12 @@ mod tests {
         Valve HH has flow rate=22; tunnel leads to valve GG
         Valve II has flow rate=0; tunnels lead to valves AA, JJ
         Valve JJ has flow rate=21; tunnel leads to valve II";
-        let (valves, aa_id, _) = parse_input(input).unwrap();
+        let (valves, aa_id, valves_index) = parse_input(input).unwrap();
+        println!("{:?}", valves_index);
         assert_eq!(aa_id, 0);
         assert_eq!(valves.len(), input.lines().count());
         assert_eq!(part1(&valves, aa_id).unwrap(), 1651);
+        assert_eq!(part2(&valves, aa_id).unwrap(), 1707);
     }
 
     #[test]
