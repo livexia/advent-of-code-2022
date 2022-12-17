@@ -2,7 +2,17 @@
 
 链接: [Advent of Code 2022](https://adventofcode.com/2022)
 
-## Day 16
+## Day 17(待补充)
+
+- 第一部分直接模拟实现，第二部分数据量巨大，无论采用何种数据结构总是都是不可能急剧减少运行时间，所以猜测是存在规律的，每年都有这样的题目。不出意外的，我依旧没能找到规律，最后只好去 [r/adventofcode](https://www.reddit.com/r/adventofcode/comments/znykq2/2022_day_17_solutions/) 寻找参考。
+- 如果存在规律，需要确定如下问题：
+    - 因什么特征而有规律
+    - 如何利用规律加快运算
+- 第二部分参考：
+    - https://www.reddit.com/r/adventofcode/comments/znykq2/comment/j0kc9qp
+    - https://www.reddit.com/r/adventofcode/comments/znykq2/comment/j0kvtwd
+
+## Day 16(待补充)
 
 - 加权图
 - 阀门的打开顺序有两个决定因素
@@ -50,7 +60,7 @@
 ### Interval
 
 参考链接：
-- [Reddit/EVQLVE](https://www.reddit.com/r/adventofcode/comments/zmcn64/comment/j0anz77/?utm_source=share&utm_medium=web2x&context=3)
+- [Reddit/EVQLVE](https://www.reddit.com/r/adventofcode/comments/zmcn64/comment/j0anz77)
 
 思路：
 - 一个传感器由多个区间组成，对于给定的 y 值，可以确定传感器在这个线上的区间。
