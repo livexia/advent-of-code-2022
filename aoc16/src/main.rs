@@ -35,7 +35,19 @@ fn part1(valves: &[Valve], aa_id: usize) -> Result<usize> {
         .filter(|(_, v)| v.flow_rate > 0)
         .map(|(i, _)| i)
         .collect();
-    let total_pressure = dfs(&memorization, &closed, 0, valves, aa_id, 0, 0, 0, 30);
+    let mut memo = HashMap::new();
+    let total_pressure = dp(
+        &memorization,
+        &closed,
+        0,
+        valves,
+        aa_id,
+        0,
+        0,
+        0,
+        30,
+        &mut memo,
+    );
 
     writeln!(io::stdout(), "Part1: {:?}", total_pressure)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
@@ -59,7 +71,8 @@ fn part2(valves: &[Valve], aa_id: usize) -> Result<usize> {
         .collect();
     closed.sort_by(|&id1, &id2| valves[id2].flow_rate.cmp(&valves[id1].flow_rate));
     let mut memo: HashMap<((usize, usize), (usize, usize), u64), usize> = HashMap::new();
-    let total_pressure = dfs_part2(
+    let mut memo2: HashMap<(usize, usize, u64), usize> = HashMap::new();
+    let total_pressure = dp_part2(
         &memorization,
         &closed,
         0,
@@ -70,6 +83,7 @@ fn part2(valves: &[Valve], aa_id: usize) -> Result<usize> {
         (0, 0),
         26,
         &mut memo,
+        &mut memo2,
     );
 
     writeln!(io::stdout(), "Part2: {:?}", total_pressure)?;
@@ -109,7 +123,7 @@ fn shortest_dis_bfs(
     }
 }
 
-fn dfs(
+fn dp(
     memorization: &[Vec<usize>],
     closed: &[usize],
     opened: u64,
@@ -119,7 +133,11 @@ fn dfs(
     pressure: usize,
     time: usize,
     time_limit: usize,
+    memo: &mut HashMap<(usize, usize, u64), usize>,
 ) -> usize {
+    if let Some(&result) = memo.get(&(pressure, time, opened)) {
+        return result;
+    }
     if opened == closed.iter().fold(0, |bit, i| bit | (1 << i)) {
         return total_pressure + (time_limit - time) * pressure;
     }
@@ -133,7 +151,7 @@ fn dfs(
                 if time + d > time_limit {
                     total_pressure + (time_limit - time) * pressure
                 } else {
-                    dfs(
+                    dp(
                         memorization,
                         closed,
                         new_opend,
@@ -143,6 +161,7 @@ fn dfs(
                         pressure + valves[next].flow_rate,
                         time + d,
                         time_limit,
+                        memo,
                     )
                 }
             } else {
@@ -151,10 +170,11 @@ fn dfs(
         })
         .max()
         .unwrap();
+    memo.insert((pressure, time, opened), result);
     result
 }
 
-fn dfs_part2(
+fn dp_part2(
     memorization: &[Vec<usize>],
     closed: &[usize],
     opened: u64,
@@ -165,6 +185,7 @@ fn dfs_part2(
     time: (usize, usize),
     time_limit: usize,
     memo: &mut HashMap<((usize, usize), (usize, usize), u64), usize>,
+    memo2: &mut HashMap<(usize, usize, u64), usize>,
 ) -> usize {
     if let Some(&result) = memo.get(&(pressure, time, opened)) {
         return result;
@@ -194,7 +215,7 @@ fn dfs_part2(
                 let mut new_opened = opened;
                 new_opened |= 1 << next0;
                 new_opened |= 1 << next1;
-                result = result.max(dfs_part2(
+                result = result.max(dp_part2(
                     memorization,
                     closed,
                     new_opened,
@@ -211,6 +232,7 @@ fn dfs_part2(
                     (time.0 + d0, time.1 + d1),
                     time_limit,
                     memo,
+                    memo2,
                 ));
             } else {
                 if d0 + time.0 > time_limit && d1 + time.1 > time_limit {
@@ -221,22 +243,23 @@ fn dfs_part2(
                             + pressure.1 * (time_limit - time.1),
                     )
                 } else {
-                    let (total_pressure, pressure, time, d0) = if d0 + time.0 > d1 + time.1 {
+                    let (total_pressure, pressure, time, d0, next0) = if d0 + time.0 > d1 + time.1 {
                         (
                             rev_tuple(total_pressure),
                             rev_tuple(pressure),
                             rev_tuple(time),
                             d1,
+                            next1,
                         )
                     } else {
-                        (total_pressure, pressure, time, d0)
+                        (total_pressure, pressure, time, d0, next0)
                     };
                     let mut new_opened = opened.clone();
                     new_opened |= 1 << next0;
                     result = result.max(
                         total_pressure.1
                             + pressure.1 * (time_limit - time.1)
-                            + dfs(
+                            + dp(
                                 memorization,
                                 closed,
                                 new_opened,
@@ -246,6 +269,7 @@ fn dfs_part2(
                                 pressure.0 + valves[next0].flow_rate,
                                 time.0 + d0,
                                 time_limit,
+                                memo2,
                             ),
                     );
                 }
