@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::error::Error;
 use std::io::{self, Read, Write};
@@ -15,9 +16,13 @@ fn main() -> Result<()> {
     io::stdin().read_to_string(&mut input)?;
     let jets: Vec<char> = input.trim().chars().map(|c| [c, 'v']).flatten().collect();
 
+    assert_eq!(part1(&jets, 277)?, 439);
     assert_eq!(part1(&jets, 2022)?, 3224);
+    assert_eq!(part1(&jets, 10000)?, 15984);
+    assert_eq!(part1(&jets, 100000)?, 159620);
     assert_eq!(part2(&jets, 1000000)?, 1595973);
-    // part2(&jets, 1000000000000)?;
+    assert_eq!(part2(&jets, 5000000)?, 7979964);
+    part2(&jets, 1000000000000)?;
     Ok(())
 }
 
@@ -42,40 +47,43 @@ fn rock_tower(jets: &[char], total_rock: i64) -> Result<i64> {
 
     use RockShape::*;
     let rocks = [Ih, X, J, Iv, O];
-    let mut jets = jets.iter().cycle();
-    let mut start = Instant::now();
+    let mut jets = jets.iter().enumerate().cycle().peekable();
+
+    let mut memorization: HashMap<(usize, usize, Vec<i64>), (i64, i64)> = HashMap::new();
+    let mut highests = vec![-1; 7];
+    let mut last_cycle = 0;
 
     let mut rock_count = 0;
     let mut highest_rock = 0;
-    let mut floor = 0;
-    for &shape in rocks.iter().cycle() {
+    for (shape_id, &shape) in rocks.iter().enumerate().cycle().peekable() {
         if rock_count == total_rock {
             break;
         }
-        if rock_count % 100000 == 0 {
-            let old_floor = floor;
-            for y in (floor..=highest_rock).rev() {
-                if (0..7).all(|x| chamber.contains(&(x, y))) {
-                    floor = y;
-                    break;
-                }
-            }
-            for x in 0..7 {
-                for y in old_floor..floor {
-                    chamber.remove(&(x, y));
-                }
-            }
-            println!(
-                "{} {:?} {}",
-                highest_rock,
-                Instant::now() - start,
-                chamber.len()
-            );
-            start = Instant::now();
-        }
+
         let mut rock = Rock::new(shape, highest_rock);
         rock_count += 1;
-        while let Some(&movement) = jets.next() {
+
+        let key = (
+            shape_id,
+            jets.peek().unwrap().0,
+            highests.iter().map(|h| highest_rock - h).collect(),
+        );
+        if let Some((last_rock, last_highest)) = memorization.get(&key) {
+            let cycle = rock_count - last_rock;
+            let cycle_inc = highest_rock - last_highest;
+            let cycle_mod = total_rock % cycle;
+            let remain_rock = total_rock - rock_count;
+            let cycle_count = remain_rock / cycle;
+            if cycle_mod == rock_count % cycle {
+                return Ok(cycle_count * cycle_inc + highest_rock);
+            }
+            if last_cycle != cycle {
+                println!("{} {} {}", rock_count, last_rock, cycle);
+                memorization.clear();
+                last_cycle = cycle;
+            }
+        }
+        while let Some((_, &movement)) = jets.next() {
             match movement {
                 '<' => {
                     let next_rock = rock.push_left();
@@ -91,12 +99,16 @@ fn rock_tower(jets: &[char], total_rock: i64) -> Result<i64> {
                 }
                 'v' => {
                     let next_rock = rock.fall_down();
-                    if next_rock.is_bottom_collided(&chamber, floor) {
+                    if next_rock.is_bottom_collided(&chamber) {
                         rock.occupy().into_iter().for_each(|c| {
                             chamber.insert(c);
                         });
                         highest_rock =
                             highest_rock.max(rock.top().iter().map(|(_, y)| y).max().unwrap() + 1);
+                        for (x, y) in rock.top() {
+                            highests[x as usize] = highests[x as usize].max(y + 1);
+                        }
+                        memorization.insert(key, (rock_count, highest_rock));
                         break;
                     };
                     rock = next_rock;
@@ -252,10 +264,8 @@ impl Rock {
         }
     }
 
-    fn is_bottom_collided(&self, chamber: &HashSet<Coord>, floor: i64) -> bool {
-        self.bottom()
-            .iter()
-            .any(|c| c.1 < floor || chamber.contains(c))
+    fn is_bottom_collided(&self, chamber: &HashSet<Coord>) -> bool {
+        self.bottom().iter().any(|c| c.1 < 0 || chamber.contains(c))
     }
 
     fn is_left_collided(&self, chamber: &HashSet<Coord>) -> bool {
@@ -290,8 +300,16 @@ mod tests {
         assert_eq!(rock_tower(&jets, 4).unwrap(), 7);
         assert_eq!(rock_tower(&jets, 5).unwrap(), 9);
         assert_eq!(rock_tower(&jets, 6).unwrap(), 10);
-        assert_eq!(part1(&jets, 2022).unwrap(), 3068);
-        assert_eq!(part2(&jets, 10000).unwrap(), 15148);
-        // assert_eq!(part2(&jets, 1000000000000).unwrap(), 1514285714288);
+        // assert_eq!(part1(&jets, 2022).unwrap(), 3068);
+        // assert_eq!(part2(&jets, 10000).unwrap(), 15148);
+        let cycle = 35;
+        let r = part2(&jets, cycle).unwrap();
+        assert_eq!(60, r);
+        assert_eq!(r + 53 * 3, part2(&jets, cycle * 4).unwrap());
+        assert_eq!(272, part2(&jets, cycle * 5).unwrap());
+        assert_eq!(151434, part2(&jets, 100000).unwrap());
+        assert_eq!(1514288, part2(&jets, 1000000).unwrap());
+        assert_eq!(15142861, part2(&jets, 10000000).unwrap());
+        assert_eq!(1514285714288, part2(&jets, 1000000000000).unwrap());
     }
 }
