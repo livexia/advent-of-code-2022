@@ -15,8 +15,8 @@ fn main() -> Result<()> {
     io::stdin().read_to_string(&mut input)?;
     let jets: Vec<char> = input.trim().chars().map(|c| [c, 'v']).flatten().collect();
 
-    part1(&jets, 2022)?;
-    part2(&jets, 1000000)?;
+    assert_eq!(part1(&jets, 2022)?, 3224);
+    assert_eq!(part2(&jets, 1000000)?, 1595973);
     // part2(&jets, 1000000000000)?;
     Ok(())
 }
@@ -40,6 +40,9 @@ fn part2(jets: &[char], total_rock: i64) -> Result<i64> {
 fn rock_tower(jets: &[char], total_rock: i64) -> Result<i64> {
     let mut chamber: HashSet<Coord> = HashSet::new();
 
+    let cycle = jets.len() as i64 / 2 * 5;
+    let mut last_height = 0;
+
     use RockShape::*;
     let rocks = [Ih, X, J, Iv, O];
     let mut jets = jets.iter().cycle();
@@ -49,48 +52,65 @@ fn rock_tower(jets: &[char], total_rock: i64) -> Result<i64> {
     let mut start = Instant::now();
     let mut floor = 0;
     for &shape in rocks.iter().cycle() {
+        if (rock_count - 1) % 13 == 0 {
+            println!(
+                "{} {} {} {}",
+                cycle,
+                rock_count,
+                highest_rock,
+                highest_rock - last_height,
+            );
+            last_height = highest_rock;
+            for y in (highest_rock - 12..=highest_rock).rev() {
+                for x in 0..7 {
+                    if chamber.contains(&(x, y)) {
+                        print!("#")
+                    } else {
+                        print!(".")
+                    }
+                }
+                println!()
+            }
+        }
         if rock_count == total_rock {
             break;
         }
-        // if rock_count % 10000000 == 0 {
-        if rock_count % 100000 == 0 {
-            let old_floor = floor;
-            for y in (floor..=highest_rock).rev() {
-                if (0..7).all(|x| chamber.contains(&(x, y))) {
-                    floor = y;
-                    break;
-                }
-            }
-            for x in 0..7 {
-                for y in old_floor..floor {
-                    chamber.remove(&(x, y));
-                }
-            }
-            println!(
-                "{} {:?} {}",
-                highest_rock,
-                Instant::now() - start,
-                chamber.len()
-            );
-            start = Instant::now();
-        }
+        // if rock_count % 100000 == 0 {
+        //     let old_floor = floor;
+        //     for y in (floor..=highest_rock).rev() {
+        //         if (0..7).all(|x| chamber.contains(&(x, y))) {
+        //             floor = y;
+        //             break;
+        //         }
+        //     }
+        //     for x in 0..7 {
+        //         for y in old_floor..floor {
+        //             chamber.remove(&(x, y));
+        //         }
+        //     }
+        //     println!(
+        //         "{} {:?} {}",
+        //         highest_rock,
+        //         Instant::now() - start,
+        //         chamber.len()
+        //     );
+        //     start = Instant::now();
+        // }
         let mut rock = Rock::new(shape, highest_rock);
         rock_count += 1;
         while let Some(&movement) = jets.next() {
             match movement {
                 '<' => {
                     let next_rock = rock.push_left();
-                    if next_rock.is_left_collided(&chamber) {
-                        continue;
+                    if !next_rock.is_left_collided(&chamber) {
+                        rock = next_rock;
                     }
-                    rock = next_rock;
                 }
                 '>' => {
                     let next_rock = rock.push_right();
-                    if next_rock.is_right_collided(&chamber) {
-                        continue;
+                    if !next_rock.is_right_collided(&chamber) {
+                        rock = next_rock;
                     }
-                    rock = next_rock;
                 }
                 'v' => {
                     let next_rock = rock.fall_down();
@@ -337,6 +357,7 @@ mod tests {
         assert_eq!(rock_tower(&jets, 5).unwrap(), 9);
         assert_eq!(rock_tower(&jets, 6).unwrap(), 10);
         assert_eq!(part1(&jets, 2022).unwrap(), 3068);
-        assert_eq!(part2(&jets, 1000000000000).unwrap(), 1514285714288);
+        assert_eq!(part2(&jets, 10000).unwrap(), 15148);
+        // assert_eq!(part2(&jets, 1000000000000).unwrap(), 1514285714288);
     }
 }
