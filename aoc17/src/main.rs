@@ -29,7 +29,7 @@ fn part1(jets: &[char], total_rock: i64) -> Result<i64> {
     Ok(highest_rock)
 }
 
-fn part2(jets: &[char], total_rock: i64) -> Result<(i64)> {
+fn part2(jets: &[char], total_rock: i64) -> Result<i64> {
     let start = Instant::now();
     let highest_rock = rock_tower(jets, total_rock)?;
     writeln!(io::stdout(), "Part2: {}", highest_rock)?;
@@ -47,42 +47,67 @@ fn rock_tower(jets: &[char], total_rock: i64) -> Result<i64> {
     let mut rock_count = 0;
     let mut highest_rock = 0;
     let mut start = Instant::now();
+    let mut floor = 0;
     for &shape in rocks.iter().cycle() {
         if rock_count == total_rock {
             break;
         }
-        if rock_count % 1000000 == 0 {
-            println!("{} {:?}", highest_rock, Instant::now() - start);
+        // if rock_count % 10000000 == 0 {
+        if rock_count % 100000 == 0 {
+            let old_floor = floor;
+            for y in (floor..=highest_rock).rev() {
+                if (0..7).all(|x| chamber.contains(&(x, y))) {
+                    floor = y;
+                    break;
+                }
+            }
+            for x in 0..7 {
+                for y in old_floor..floor {
+                    chamber.remove(&(x, y));
+                }
+            }
+            println!(
+                "{} {:?} {}",
+                highest_rock,
+                Instant::now() - start,
+                chamber.len()
+            );
             start = Instant::now();
         }
         let mut rock = Rock::new(shape, highest_rock);
         rock_count += 1;
         while let Some(&movement) = jets.next() {
-            let next_rock = match movement {
-                'v' => rock.fall_down(),
-                '>' => rock.push_right(),
-                '<' => rock.push_left(),
+            match movement {
+                '<' => {
+                    let next_rock = rock.push_left();
+                    if next_rock.is_left_collided(&chamber) {
+                        continue;
+                    }
+                    rock = next_rock;
+                }
+                '>' => {
+                    let next_rock = rock.push_right();
+                    if next_rock.is_right_collided(&chamber) {
+                        continue;
+                    }
+                    rock = next_rock;
+                }
+                'v' => {
+                    let next_rock = rock.fall_down();
+                    if next_rock.is_bottom_collided(&chamber, floor) {
+                        rock.occupy().into_iter().for_each(|c| {
+                            chamber.insert(c);
+                        });
+                        highest_rock = highest_rock.max(rock.top_edge() + 1);
+                        break;
+                    };
+                    rock = next_rock;
+                }
                 _ => unreachable!(),
             };
-            if (movement == '>' || movement == '<') && !next_rock.valid(&chamber) {
-                continue;
-            }
-            if movement == 'v' && is_collided(&chamber, &next_rock) {
-                rock.occupy().into_iter().for_each(|c| {
-                    chamber.insert(c);
-                });
-                highest_rock = highest_rock.max(rock.top_edge() + 1);
-                break;
-            }
-            rock = next_rock;
         }
     }
     Ok(highest_rock)
-}
-
-fn is_collided(chamber: &HashSet<Coord>, rock: &Rock) -> bool {
-    let coords = rock.occupy();
-    coords.iter().any(|c| c.1 < 0 || chamber.contains(c))
 }
 
 #[derive(Debug)]
@@ -194,11 +219,97 @@ impl Rock {
         }
     }
 
+    fn is_bottom_collided(&self, chamber: &HashSet<Coord>, floor: i64) -> bool {
+        self.bottom_edge() < floor
+            || match self.shape {
+                RockShape::Ih => {
+                    chamber.contains(&(self.top_left_pos.0, self.top_left_pos.1))
+                        || chamber.contains(&(self.top_left_pos.0 + 1, self.top_left_pos.1))
+                        || chamber.contains(&(self.top_left_pos.0 + 2, self.top_left_pos.1))
+                        || chamber.contains(&(self.top_left_pos.0 + 3, self.top_left_pos.1))
+                }
+                RockShape::Iv => chamber.contains(&(self.top_left_pos.0, self.top_left_pos.1 - 3)),
+                RockShape::J => {
+                    chamber.contains(&(self.top_left_pos.0, self.top_left_pos.1 - 2))
+                        || chamber.contains(&(self.top_left_pos.0 + 1, self.top_left_pos.1 - 2))
+                        || chamber.contains(&(self.top_left_pos.0 + 2, self.top_left_pos.1 - 2))
+                }
+                RockShape::O => {
+                    chamber.contains(&(self.top_left_pos.0, self.top_left_pos.1 - 1))
+                        || chamber.contains(&(self.top_left_pos.0 + 1, self.top_left_pos.1 - 1))
+                }
+                RockShape::X => {
+                    chamber.contains(&(self.top_left_pos.0 + 1, self.top_left_pos.1 - 2))
+                        || chamber.contains(&(self.top_left_pos.0, self.top_left_pos.1 - 1))
+                        || chamber.contains(&(self.top_left_pos.0 + 2, self.top_left_pos.1 - 1))
+                }
+            }
+    }
+
+    fn is_left_collided(&self, chamber: &HashSet<Coord>) -> bool {
+        self.left_edge() < 0
+            || match self.shape {
+                RockShape::Ih => chamber.contains(&self.top_left_pos),
+                RockShape::Iv => {
+                    chamber.contains(&(self.top_left_pos.0, self.top_left_pos.1))
+                        || chamber.contains(&(self.top_left_pos.0, self.top_left_pos.1 - 1))
+                        || chamber.contains(&(self.top_left_pos.0, self.top_left_pos.1 - 2))
+                        || chamber.contains(&(self.top_left_pos.0, self.top_left_pos.1 - 3))
+                }
+                RockShape::J => {
+                    chamber.contains(&(self.top_left_pos.0, self.top_left_pos.1 - 2))
+                        || chamber.contains(&(self.top_left_pos.0 + 2, self.top_left_pos.1))
+                        || chamber.contains(&(self.top_left_pos.0 + 2, self.top_left_pos.1 - 1))
+                }
+                RockShape::O => {
+                    chamber.contains(&(self.top_left_pos.0, self.top_left_pos.1))
+                        || chamber.contains(&(self.top_left_pos.0, self.top_left_pos.1 - 1))
+                }
+                RockShape::X => {
+                    chamber.contains(&(self.top_left_pos.0, self.top_left_pos.1 - 1))
+                        || chamber.contains(&(self.top_left_pos.0 + 1, self.top_left_pos.1))
+                        || chamber.contains(&(self.top_left_pos.0 + 1, self.top_left_pos.1 - 2))
+                }
+            }
+    }
+
+    fn is_right_collided(&self, chamber: &HashSet<Coord>) -> bool {
+        self.right_edge() >= 7
+            || match self.shape {
+                RockShape::Ih => chamber.contains(&(self.top_left_pos.0 + 3, self.top_left_pos.1)),
+                RockShape::Iv => {
+                    chamber.contains(&(self.top_left_pos.0, self.top_left_pos.1))
+                        || chamber.contains(&(self.top_left_pos.0, self.top_left_pos.1 - 1))
+                        || chamber.contains(&(self.top_left_pos.0, self.top_left_pos.1 - 2))
+                        || chamber.contains(&(self.top_left_pos.0, self.top_left_pos.1 - 3))
+                }
+                RockShape::J => {
+                    chamber.contains(&(self.top_left_pos.0 + 2, self.top_left_pos.1 - 2))
+                        || chamber.contains(&(self.top_left_pos.0 + 2, self.top_left_pos.1))
+                        || chamber.contains(&(self.top_left_pos.0 + 2, self.top_left_pos.1 - 1))
+                }
+                RockShape::O => {
+                    chamber.contains(&(self.top_left_pos.0 + 1, self.top_left_pos.1))
+                        || chamber.contains(&(self.top_left_pos.0 + 1, self.top_left_pos.1 - 1))
+                }
+                RockShape::X => {
+                    chamber.contains(&(self.top_left_pos.0 + 2, self.top_left_pos.1 - 1))
+                        || chamber.contains(&(self.top_left_pos.0 + 1, self.top_left_pos.1))
+                        || chamber.contains(&(self.top_left_pos.0 + 1, self.top_left_pos.1 - 2))
+                }
+            }
+    }
+
     fn valid(&self, chamber: &HashSet<Coord>) -> bool {
         self.left_edge() >= 0
             && self.right_edge() < 7
             && self.bottom_edge() >= 0
-            && !is_collided(chamber, self)
+            && !self.is_collided(chamber)
+    }
+
+    fn is_collided(&self, chamber: &HashSet<Coord>) -> bool {
+        let coords = self.occupy();
+        coords.iter().any(|c| c.1 < 0 || chamber.contains(c))
     }
 }
 
