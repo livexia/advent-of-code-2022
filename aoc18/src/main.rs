@@ -1,7 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::io::{self, Read, Write};
-use std::str::FromStr;
 use std::time::Instant;
 
 macro_rules! err {
@@ -10,7 +9,7 @@ macro_rules! err {
 
 type Result<T> = ::std::result::Result<T, Box<dyn Error>>;
 type Coord = i32;
-type Position = (Coord, Coord, Coord);
+type Vertex = (Coord, Coord, Coord);
 
 fn main() -> Result<()> {
     let mut input = String::new();
@@ -19,15 +18,16 @@ fn main() -> Result<()> {
     let cubes = input
         .lines()
         .map(|l| from_str(l))
-        .collect::<Result<Vec<Position>>>()?;
+        .collect::<Result<Vec<Vertex>>>()?;
     assert_eq!(cubes.len(), input.lines().count());
 
     part1(&cubes)?;
     part2(&cubes)?;
+    part2_with_flood_fill(&cubes)?;
     Ok(())
 }
 
-fn part1(cubes: &[Position]) -> Result<i32> {
+fn part1(cubes: &[Vertex]) -> Result<i32> {
     let start = Instant::now();
     let result = surface_area(cubes);
     writeln!(io::stdout(), "Part1: {}", result)?;
@@ -35,78 +35,103 @@ fn part1(cubes: &[Position]) -> Result<i32> {
     Ok(result)
 }
 
-fn part2(cubes: &[Position]) -> Result<i32> {
+fn part2(cubes: &[Vertex]) -> Result<i32> {
     let start = Instant::now();
-    let cubes_pos: HashSet<Position> = HashSet::from_iter(cubes.iter().cloned());
-    let points: HashSet<Position> = HashSet::from_iter(
+    let cubes_set: HashSet<Vertex> = HashSet::from_iter(cubes.iter().cloned());
+    let vertices: HashSet<Vertex> = HashSet::from_iter(
         cubes
             .iter()
-            .map(|&c| points(c))
+            .map(|&c| adjacent_vertices(c))
             .flatten()
-            .filter(|p| !cubes_pos.contains(p)),
+            .filter(|p| !cubes_set.contains(p)),
     );
     let range = ranges(&cubes);
     let mut result = surface_area(&cubes);
     let mut visited = HashMap::new();
-    for pos in points {
-        if !visited.contains_key(&pos) {
-            result -= surface_area(&dfs(&cubes_pos, pos, &mut visited, range));
+    for vertex in vertices {
+        if !visited.contains_key(&vertex) {
+            result -= surface_area(&dfs(&cubes_set, vertex, &mut visited, range));
         }
     }
-
     writeln!(io::stdout(), "Part2: {}", result)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(result)
 }
 
 fn dfs(
-    cubes: &HashSet<Position>,
-    pos: Position,
-    visited: &mut HashMap<Position, i32>,
-    range: (Position, Position),
-) -> Vec<Position> {
-    if !in_range(range, pos) {
-        visited.insert(pos, 0);
+    cubes: &HashSet<Vertex>,
+    vertex: Vertex,
+    visited: &mut HashMap<Vertex, i32>,
+    range: (Vertex, Vertex),
+) -> Vec<Vertex> {
+    if !in_range(range, vertex) {
+        visited.insert(vertex, 0);
         return vec![];
     }
-    if visited.contains_key(&pos) {
-        unreachable!()
+    if visited.contains_key(&vertex) {
+        return vec![];
     }
-    visited.insert(pos, 1);
-    let adjacent_pos = adjacent_position(pos);
-    let adjacent_cubes: Vec<Position> = adjacent_pos
+    visited.insert(vertex, 1);
+    let mut result = vec![vertex];
+    let adjacent_cubes: Vec<Vertex> = adjacent_vertices(vertex)
         .into_iter()
         .filter(|p| !cubes.contains(p))
         .collect();
-    let mut result = vec![pos];
-    if adjacent_cubes.len() == 0 {
-        // 1x1x1 air cube
-        result = vec![pos];
-    } else {
-        for next in adjacent_cubes {
-            if let Some(&r) = visited.get(&next) {
-                if r == 0 {
-                    result.clear();
-                    break;
-                }
+    for next in adjacent_cubes {
+        if let Some(&r) = visited.get(&next) {
+            if r == 0 {
+                result.clear();
+                break;
+            }
+        } else {
+            let r = dfs(cubes, next, visited, range);
+            if r.len() == 0 {
+                result.clear();
+                break;
             } else {
-                let r = dfs(cubes, next, visited, range);
-                if r.len() == 0 {
-                    result.clear();
-                    break;
-                } else {
-                    result.extend(r.iter());
-                }
+                result.extend(r.iter());
             }
         }
     }
     if result.len() == 0 {
-        visited.insert(pos, 0);
+        visited.insert(vertex, 0);
     }
     result
 }
 
-fn surface_area(cubes: &[Position]) -> i32 {
+fn part2_with_flood_fill(cubes: &[Vertex]) -> Result<i32> {
+    let start = Instant::now();
+    let cubes_set: HashSet<Vertex> = HashSet::from_iter(cubes.iter().cloned());
+    let range = ranges(&cubes);
+    let result = flood(range.0, &cubes_set, range);
+
+    writeln!(io::stdout(), "Part2 with flood fill: {}", result)?;
+    writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
+    Ok(result)
+}
+
+fn flood(start: Vertex, cubes: &HashSet<Vertex>, range: (Vertex, Vertex)) -> i32 {
+    let mut stack = Vec::new();
+    let mut sum = 0;
+    let mut visited = HashSet::new();
+    stack.push(start);
+    while let Some(cur) = stack.pop() {
+        if visited.insert(cur) {
+            if in_range(range, cur) {
+                for next in adjacent_vertices(cur) {
+                    if cubes.contains(&next) {
+                        sum += 1;
+                    } else {
+                        stack.push(next);
+                    }
+                }
+            }
+        }
+    }
+    sum
+}
+
+fn surface_area(cubes: &[Vertex]) -> i32 {
     let l = cubes.len();
     if l == 0 {
         return 0;
@@ -123,29 +148,12 @@ fn surface_area(cubes: &[Position]) -> i32 {
     }
     result
 }
-fn connected(p1: Position, p2: Position) -> bool {
-    dis(p1, p2) == 1
+fn connected(v1: Vertex, v2: Vertex) -> bool {
+    dis(v1, v2) == 1
 }
 
-fn points(pos: Position) -> Vec<Position> {
-    let (x, y, z) = pos;
-    let mut result = vec![
-        (x, y, z),
-        (x - 1, y, z),
-        (x, y - 1, z),
-        (x, y, z - 1),
-        (x - 1, y - 1, z),
-        (x - 1, y, z),
-        (x, y - 1, z - 1),
-        (x - 1, y - 1, z - 1),
-    ];
-    result.sort();
-    // assert_eq!(result.last(), Some(&self.positon()));
-    result
-}
-
-fn adjacent_position(pos: Position) -> Vec<Position> {
-    let (x, y, z) = pos;
+fn adjacent_vertices(vertex: Vertex) -> Vec<Vertex> {
+    let (x, y, z) = vertex;
     vec![
         (x - 1, y, z),
         (x, y - 1, z),
@@ -156,7 +164,7 @@ fn adjacent_position(pos: Position) -> Vec<Position> {
     ]
 }
 
-fn ranges(cubes: &[Position]) -> (Position, Position) {
+fn ranges(cubes: &[Vertex]) -> (Vertex, Vertex) {
     let mut min_x = i32::MAX;
     let mut min_y = i32::MAX;
     let mut min_z = i32::MAX;
@@ -177,20 +185,20 @@ fn ranges(cubes: &[Position]) -> (Position, Position) {
     )
 }
 
-fn in_range(range: (Position, Position), pos: Position) -> bool {
-    dis(range.0, range.1) == dis(pos, range.0) + dis(pos, range.1)
+fn in_range(range: (Vertex, Vertex), vertex: Vertex) -> bool {
+    dis(range.0, range.1) == dis(vertex, range.0) + dis(vertex, range.1)
 }
 
-fn dis(p1: Position, p2: Position) -> Coord {
+fn dis(p1: Vertex, p2: Vertex) -> Coord {
     (p1.0.abs_diff(p2.0) + p1.1.abs_diff(p2.1) + p1.2.abs_diff(p2.2)) as Coord
 }
 
-fn from_str(s: &str) -> Result<Position> {
+fn from_str(s: &str) -> Result<Vertex> {
     let coords: Vec<&str> = s.trim().split(",").collect();
     if coords.len() == 3 {
         return Ok((coords[0].parse()?, coords[1].parse()?, coords[2].parse()?));
     }
-    err!("not a valid position: {}", s)
+    err!("not a valid vertex: {}", s)
 }
 
 #[cfg(test)]
@@ -213,7 +221,7 @@ mod tests {
         3,2,5
         2,1,5
         2,3,5";
-        let cubes: Vec<Position> = input.lines().map(|l| from_str(l).unwrap()).collect();
+        let cubes: Vec<Vertex> = input.lines().map(|l| from_str(l).unwrap()).collect();
         assert_eq!(cubes.len(), input.lines().count());
         assert_eq!(connected((1, 1, 1), (2, 1, 1)), true);
         assert_eq!(connected((2, 1, 1), (2, 2, 1)), true);
