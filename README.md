@@ -2,6 +2,10 @@
 
 链接: [Advent of Code 2022](https://adventofcode.com/2022)
 
+## 进一步学习
+- Day 17
+- Day 16
+
 ## Day 18（待补充并查集实现）
 
 - 今天的题目是一道连通题，只不过当我写完我才意识到这一点。
