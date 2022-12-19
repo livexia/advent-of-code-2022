@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 use std::error::Error;
 use std::io::{self, Read, Write};
-use std::os::macos::raw::stat;
 use std::str::FromStr;
 use std::time::Instant;
 
@@ -20,7 +19,7 @@ type Key = (
     usize,
     usize,
     usize,
-);
+); // 9 usize, with time
 
 fn main() -> Result<()> {
     let mut input = String::new();
@@ -28,7 +27,7 @@ fn main() -> Result<()> {
     let blueprints: Vec<Blueprint> = input.lines().map(|l| l.parse()).collect::<Result<_>>()?;
 
     part1(&blueprints)?;
-    // part2()?;
+    part2(&blueprints)?;
     Ok(())
 }
 
@@ -36,14 +35,26 @@ fn part1(blueprints: &[Blueprint]) -> Result<usize> {
     let start = Instant::now();
     let mut result = 0;
 
-    for b in &blueprints[1..] {
-        println!("{:?}", b);
-        result += b.execute(0, Status::new(), &mut HashSet::new()) * b.id;
-
+    for b in blueprints {
+        result += b.execute(0, Status::new(), &mut HashSet::new(), 24) * b.id;
         println!("{:?}", b);
         println!("{:?}", result);
     }
     writeln!(io::stdout(), "Part1: {:?}", result)?;
+    writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
+    Ok(result)
+}
+
+fn part2(blueprints: &[Blueprint]) -> Result<usize> {
+    let start = Instant::now();
+    let mut result = 1;
+
+    for b in &blueprints[..3.min(blueprints.len())] {
+        println!("{:?}", b);
+        result *= b.execute(0, Status::new(), &mut HashSet::new(), 32);
+        println!("{:?}", result);
+    }
+    writeln!(io::stdout(), "Part2: {:?}", result)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(result)
 }
@@ -59,28 +70,36 @@ struct Blueprint {
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 struct Status {
-    robot_count: [usize; 4],
+    robots: [usize; 4],
     goods: [usize; 4],
 }
 
 impl Status {
     fn new() -> Self {
         Status {
-            robot_count: [1, 0, 0, 0],
+            robots: [1, 0, 0, 0],
             goods: [0, 0, 0, 0],
         }
     }
 
     fn collect(&mut self) {
-        for (index, count) in self.robot_count.iter().enumerate() {
+        for (index, count) in self.robots.iter().enumerate() {
             self.goods[index] += count;
         }
     }
 
-    fn to_key(&self, time: usize) -> Vec<usize> {
-        let mut r = [self.robot_count, self.goods].concat();
-        r.push(time);
-        r
+    fn to_key(&self, time: usize) -> Key {
+        (
+            self.robots[0],
+            self.robots[1],
+            self.robots[2],
+            self.robots[3],
+            self.goods[0],
+            self.goods[1],
+            self.goods[2],
+            self.goods[3],
+            time,
+        )
     }
 }
 
@@ -89,12 +108,14 @@ impl Blueprint {
         &self,
         time: usize,
         mut status: Status,
-        memo: &mut HashSet<(Status, usize)>,
+        memo: &mut HashSet<Key>,
+        time_limit: usize,
     ) -> usize {
-        memo.insert((status.clone(), time));
-        if time == 24 {
+        if time == time_limit {
             return status.goods[3];
         }
+        let key = status.to_key(time);
+        memo.insert(key);
         let (r1, r2, r3, r4) = (
             self.can_build_geode_robot(&status),
             self.can_build_obsidian_robot(&status),
@@ -105,35 +126,38 @@ impl Blueprint {
         let mut new_status = vec![];
         if r1 {
             new_status.push(self.build_geode_robot(&status))
+        } else {
+            if r2 {
+                new_status.push(self.build_obsidian_robot(&status))
+            }
+            if r3 {
+                new_status.push(self.build_clay_robot(&status))
+            }
+            if r4 {
+                new_status.push(self.build_ore_robot(&status))
+            }
+            new_status.push(status);
         }
-        if r2 {
-            new_status.push(self.build_obsidian_robot(&status))
-        }
-        if r3 {
-            new_status.push(self.build_clay_robot(&status))
-        }
-        if r4 {
-            new_status.push(self.build_ore_robot(&status))
-        }
-        new_status.push(status);
-        new_status
+        let r = new_status
             .into_iter()
             .map(|s| {
-                if !memo.contains(&(s, time + 1)) {
-                    self.execute(time + 1, s, memo)
-                } else {
+                let key = s.to_key(time + 1);
+                if memo.contains(&key) {
                     0
+                } else {
+                    self.execute(time + 1, s, memo, time_limit)
                 }
             })
             .max()
-            .unwrap()
+            .unwrap();
+        r
     }
 
     fn build_geode_robot(&self, status: &Status) -> Status {
         let mut status = status.clone();
         status.goods[0] -= self.geode_cost.0;
         status.goods[2] -= self.geode_cost.1;
-        status.robot_count[3] += 1;
+        status.robots[3] += 1;
         status
     }
 
@@ -141,21 +165,21 @@ impl Blueprint {
         let mut status = status.clone();
         status.goods[0] -= self.obsidian_cost.0;
         status.goods[1] -= self.obsidian_cost.1;
-        status.robot_count[2] += 1;
+        status.robots[2] += 1;
         status
     }
 
     fn build_clay_robot(&self, status: &Status) -> Status {
         let mut status = status.clone();
         status.goods[0] -= self.clay_cost;
-        status.robot_count[1] += 1;
+        status.robots[1] += 1;
         status
     }
 
     fn build_ore_robot(&self, status: &Status) -> Status {
         let mut status = status.clone();
         status.goods[0] -= self.ore_cost;
-        status.robot_count[0] += 1;
+        status.robots[0] += 1;
         status
     }
 
@@ -208,6 +232,10 @@ mod test {
         let input = "Blueprint 1: Each ore robot costs 4 ore. Each clay robot costs 2 ore. Each obsidian robot costs 3 ore and 14 clay. Each geode robot costs 2 ore and 7 obsidian.
         Blueprint 2: Each ore robot costs 2 ore. Each clay robot costs 3 ore. Each obsidian robot costs 3 ore and 8 clay. Each geode robot costs 3 ore and 12 obsidian.";
         let blueprints: Vec<Blueprint> = input.lines().map(|l| l.parse().unwrap()).collect();
+        // assert_eq!(part1(&blueprints[..1]).unwrap(), 9);
+        // assert_eq!(part1(&blueprints[1..]).unwrap(), 24);
         assert_eq!(part1(&blueprints).unwrap(), 33);
+        assert_eq!(part2(&blueprints[..1]).unwrap(), 56);
+        assert_eq!(part2(&blueprints[1..]).unwrap(), 62);
     }
 }
