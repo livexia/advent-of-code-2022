@@ -9,51 +9,38 @@ macro_rules! err {
 }
 
 type Result<T> = ::std::result::Result<T, Box<dyn Error>>;
-type Key = (
-    usize,
-    usize,
-    usize,
-    usize,
-    usize,
-    usize,
-    usize,
-    usize,
-    usize,
-); // 9 usize, with time
+type Key = (u16, u16, u16, u16, u16, u16, u16, u16, u16); // 9 u16, with time
 
 fn main() -> Result<()> {
     let mut input = String::new();
     io::stdin().read_to_string(&mut input)?;
-    let blueprints: Vec<Blueprint> = input.lines().map(|l| l.parse()).collect::<Result<_>>()?;
+    let mut blueprints: Vec<Blueprint> = input.lines().map(|l| l.parse()).collect::<Result<_>>()?;
 
-    part1(&blueprints)?;
-    part2(&blueprints)?;
+    part1(&mut blueprints)?;
+    part2(&mut blueprints)?;
     Ok(())
 }
 
-fn part1(blueprints: &[Blueprint]) -> Result<usize> {
+fn part1(blueprints: &mut [Blueprint]) -> Result<u16> {
     let start = Instant::now();
     let mut result = 0;
 
     for b in blueprints {
-        result += b.execute(0, Status::new(), &mut HashSet::new(), 24) * b.id;
-        println!("{:?}", b);
-        println!("{:?}", result);
+        result += b.execute(0, State::new(), &mut HashSet::new(), 24) * b.id;
     }
     writeln!(io::stdout(), "Part1: {:?}", result)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(result)
 }
 
-fn part2(blueprints: &[Blueprint]) -> Result<usize> {
+fn part2(blueprints: &mut [Blueprint]) -> Result<u16> {
     let start = Instant::now();
-    let mut result = 1;
 
-    for b in &blueprints[..3.min(blueprints.len())] {
-        println!("{:?}", b);
-        result *= b.execute(0, Status::new(), &mut HashSet::new(), 32);
-        println!("{:?}", result);
-    }
+    let l = blueprints.len();
+    let result = blueprints[..3.min(l)]
+        .iter_mut()
+        .map(|b| b.execute(0, State::new(), &mut HashSet::new(), 32))
+        .product();
     writeln!(io::stdout(), "Part2: {:?}", result)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(result)
@@ -61,22 +48,26 @@ fn part2(blueprints: &[Blueprint]) -> Result<usize> {
 
 #[derive(Clone, Debug)]
 struct Blueprint {
-    id: usize,
-    ore_cost: usize,
-    clay_cost: usize,
-    obsidian_cost: (usize, usize),
-    geode_cost: (usize, usize),
+    id: u16,
+    ore_cost: u16,
+    clay_cost: u16,
+    obsidian_cost: (u16, u16),
+    geode_cost: (u16, u16),
+    max_ore: u16,
+    max_clay: u16,
+    max_obsidian: u16,
+    max_geodes: u16,
 }
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-struct Status {
-    robots: [usize; 4],
-    goods: [usize; 4],
+struct State {
+    robots: [u16; 4],
+    goods: [u16; 4],
 }
 
-impl Status {
+impl State {
     fn new() -> Self {
-        Status {
+        State {
             robots: [1, 0, 0, 0],
             goods: [0, 0, 0, 0],
         }
@@ -88,7 +79,7 @@ impl Status {
         }
     }
 
-    fn to_key(&self, time: usize) -> Key {
+    fn to_key(&self, time: u16) -> Key {
         (
             self.robots[0],
             self.robots[1],
@@ -105,40 +96,50 @@ impl Status {
 
 impl Blueprint {
     fn execute(
-        &self,
-        time: usize,
-        mut status: Status,
+        &mut self,
+        time: u16,
+        mut state: State,
         memo: &mut HashSet<Key>,
-        time_limit: usize,
-    ) -> usize {
+        time_limit: u16,
+    ) -> u16 {
         if time == time_limit {
-            return status.goods[3];
+            self.max_geodes = self.max_geodes.max(state.goods[3]);
+            return state.goods[3];
         }
-        let key = status.to_key(time);
+        let mut p_g = state.goods[3];
+        for i in 1..(time_limit - time + 1) {
+            // max geode robot count is time_limit - time
+            p_g += state.robots[3] + i - 1
+        }
+        if p_g <= self.max_geodes {
+            return 0;
+        }
+        state = self.trim_goods(state, time, time_limit);
+        let key = state.to_key(time);
         memo.insert(key);
         let (r1, r2, r3, r4) = (
-            self.can_build_geode_robot(&status),
-            self.can_build_obsidian_robot(&status),
-            self.can_build_clay_robot(&status),
-            self.can_build_ore_robot(&status),
+            self.can_build_geode_robot(&state),
+            self.can_build_obsidian_robot(&state),
+            self.can_build_clay_robot(&state),
+            self.can_build_ore_robot(&state),
         ); // dry-run before collect
-        status.collect();
-        let mut new_status = vec![];
+        state.collect();
+        let mut new_state = vec![];
         if r1 {
-            new_status.push(self.build_geode_robot(&status))
+            new_state.push(self.build_geode_robot(&state))
         } else {
-            if r2 {
-                new_status.push(self.build_obsidian_robot(&status))
+            if r2 && state.robots[2] < self.max_obsidian {
+                new_state.push(self.build_obsidian_robot(&state))
             }
-            if r3 {
-                new_status.push(self.build_clay_robot(&status))
+            if r3 && state.robots[1] < self.max_clay {
+                new_state.push(self.build_clay_robot(&state))
             }
-            if r4 {
-                new_status.push(self.build_ore_robot(&status))
+            if r4 && state.robots[0] < self.max_ore {
+                new_state.push(self.build_ore_robot(&state))
             }
-            new_status.push(status);
+            new_state.push(state);
         }
-        let r = new_status
+        let r = new_state
             .into_iter()
             .map(|s| {
                 let key = s.to_key(time + 1);
@@ -150,53 +151,61 @@ impl Blueprint {
             })
             .max()
             .unwrap();
+        self.max_geodes = self.max_geodes.max(r);
         r
     }
 
-    fn build_geode_robot(&self, status: &Status) -> Status {
-        let mut status = status.clone();
-        status.goods[0] -= self.geode_cost.0;
-        status.goods[2] -= self.geode_cost.1;
-        status.robots[3] += 1;
-        status
+    fn trim_goods(&self, mut state: State, time: u16, time_limit: u16) -> State {
+        state.goods[0] = state.goods[0].min((time_limit - time) * self.max_ore);
+        state.goods[1] = state.goods[1].min((time_limit - time) * self.max_clay);
+        state.goods[2] = state.goods[2].min((time_limit - time) * self.max_obsidian);
+        state
     }
 
-    fn build_obsidian_robot(&self, status: &Status) -> Status {
-        let mut status = status.clone();
-        status.goods[0] -= self.obsidian_cost.0;
-        status.goods[1] -= self.obsidian_cost.1;
-        status.robots[2] += 1;
-        status
+    fn build_geode_robot(&self, state: &State) -> State {
+        let mut state = state.clone();
+        state.goods[0] -= self.geode_cost.0;
+        state.goods[2] -= self.geode_cost.1;
+        state.robots[3] += 1;
+        state
     }
 
-    fn build_clay_robot(&self, status: &Status) -> Status {
-        let mut status = status.clone();
-        status.goods[0] -= self.clay_cost;
-        status.robots[1] += 1;
-        status
+    fn build_obsidian_robot(&self, state: &State) -> State {
+        let mut state = state.clone();
+        state.goods[0] -= self.obsidian_cost.0;
+        state.goods[1] -= self.obsidian_cost.1;
+        state.robots[2] += 1;
+        state
     }
 
-    fn build_ore_robot(&self, status: &Status) -> Status {
-        let mut status = status.clone();
-        status.goods[0] -= self.ore_cost;
-        status.robots[0] += 1;
-        status
+    fn build_clay_robot(&self, state: &State) -> State {
+        let mut state = state.clone();
+        state.goods[0] -= self.clay_cost;
+        state.robots[1] += 1;
+        state
     }
 
-    fn can_build_geode_robot(&self, status: &Status) -> bool {
-        status.goods[0] >= self.geode_cost.0 && status.goods[2] >= self.geode_cost.1
+    fn build_ore_robot(&self, state: &State) -> State {
+        let mut state = state.clone();
+        state.goods[0] -= self.ore_cost;
+        state.robots[0] += 1;
+        state
     }
 
-    fn can_build_obsidian_robot(&self, status: &Status) -> bool {
-        status.goods[0] >= self.obsidian_cost.0 && status.goods[1] >= self.obsidian_cost.1
+    fn can_build_geode_robot(&self, state: &State) -> bool {
+        state.goods[0] >= self.geode_cost.0 && state.goods[2] >= self.geode_cost.1
     }
 
-    fn can_build_clay_robot(&self, status: &Status) -> bool {
-        status.goods[0] >= self.clay_cost
+    fn can_build_obsidian_robot(&self, state: &State) -> bool {
+        state.goods[0] >= self.obsidian_cost.0 && state.goods[1] >= self.obsidian_cost.1
     }
 
-    fn can_build_ore_robot(&self, status: &Status) -> bool {
-        status.goods[0] >= self.ore_cost
+    fn can_build_clay_robot(&self, state: &State) -> bool {
+        state.goods[0] >= self.clay_cost
+    }
+
+    fn can_build_ore_robot(&self, state: &State) -> bool {
+        state.goods[0] >= self.ore_cost
     }
 }
 
@@ -207,7 +216,7 @@ impl FromStr for Blueprint {
         let r: Vec<_> = s
             .trim()
             .split([' ', ':'])
-            .filter_map(|w| w.parse::<usize>().ok())
+            .filter_map(|w| w.parse::<u16>().ok())
             .collect();
         if r.len() != 7 {
             err!("input is not a valid blueprint: {}", s)
@@ -218,6 +227,10 @@ impl FromStr for Blueprint {
                 clay_cost: r[2],
                 obsidian_cost: (r[3], r[4]),
                 geode_cost: (r[5], r[6]),
+                max_ore: r[1].max(r[2]).max(r[3]).max(r[4]),
+                max_clay: r[4],
+                max_obsidian: r[6],
+                max_geodes: 0,
             })
         }
     }
@@ -231,11 +244,11 @@ mod test {
     fn example_input() {
         let input = "Blueprint 1: Each ore robot costs 4 ore. Each clay robot costs 2 ore. Each obsidian robot costs 3 ore and 14 clay. Each geode robot costs 2 ore and 7 obsidian.
         Blueprint 2: Each ore robot costs 2 ore. Each clay robot costs 3 ore. Each obsidian robot costs 3 ore and 8 clay. Each geode robot costs 3 ore and 12 obsidian.";
-        let blueprints: Vec<Blueprint> = input.lines().map(|l| l.parse().unwrap()).collect();
+        let mut blueprints: Vec<Blueprint> = input.lines().map(|l| l.parse().unwrap()).collect();
         // assert_eq!(part1(&blueprints[..1]).unwrap(), 9);
         // assert_eq!(part1(&blueprints[1..]).unwrap(), 24);
-        assert_eq!(part1(&blueprints).unwrap(), 33);
-        assert_eq!(part2(&blueprints[..1]).unwrap(), 56);
-        assert_eq!(part2(&blueprints[1..]).unwrap(), 62);
+        assert_eq!(part1(&mut blueprints).unwrap(), 33);
+        assert_eq!(part2(&mut blueprints[..1]).unwrap(), 56);
+        assert_eq!(part2(&mut blueprints[1..]).unwrap(), 62);
     }
 }
