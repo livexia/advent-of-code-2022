@@ -116,14 +116,16 @@ fn mixing_in_place(nums: &mut Vec<(i64, usize)>) {
 }
 
 fn wrap(cur: i64, offset: i64, length: i64) -> usize {
-    let next = cur + offset;
-    if next >= 0 && next < length {
-        next as usize
-    } else if next < 0 {
-        (next % (length - 1) + length - 1) as usize
-    } else {
-        (next % (length - 1)) as usize
-    }
+    // let next = cur + offset;
+    // if next >= 0 && next < length {
+    //     next as usize
+    // } else if next < 0 {
+    //     (next % (length - 1) + length - 1) as usize
+    // } else {
+    //     (next % (length - 1)) as usize
+    // }
+    // or
+    (cur + offset).rem_euclid(length - 1) as usize
 }
 
 fn parse_input(input: &str) -> Vec<(i64, usize)> {
@@ -150,7 +152,7 @@ fn example_input() {
     assert_eq!(1623178306, part2(&nums).unwrap());
     assert_eq!(1623178306, part2_in_place(&nums).unwrap());
 
-    let mut t = vec![(3, 0), (1, 1), (0, 2)];
-    mixing(&mut t);
-    assert_eq!(vec![(3, 0), (1, 1), (0, 2)], t);
+    // let mut t = vec![(3, 0), (1, 1), (0, 2)];
+    // mixing(&mut t);
+    // assert_eq!(vec![(3, 0), (1, 1), (0, 2)], t);
 }
