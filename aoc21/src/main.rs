@@ -36,7 +36,6 @@ fn part1(monkeys: &[Monkey], index: &HashMap<&str, Integer>) -> Result<Integer> 
 fn part2(monkeys: &[Monkey], index: &HashMap<&str, Integer>) -> Result<Integer> {
     let start = Instant::now();
 
-    let &humn_id = index.get("humn").unwrap();
     let &root_id = index.get("root").unwrap();
     let (m1, m2) = match &monkeys[root_id as usize].yell {
         Yell::Number(_) => return err!("not a valid root: {:?}", monkeys[root_id as usize]),
@@ -47,36 +46,39 @@ fn part2(monkeys: &[Monkey], index: &HashMap<&str, Integer>) -> Result<Integer> 
     dfs(monkeys, &root_id, &mut memo, 2);
     let f1 = memo.get(&m1).unwrap();
     let f2 = memo.get(&m2).unwrap();
-    let mut humn = monkeys[humn_id as usize].yell.unwrap().unwrap();
+    let humn = solve(f1, f2)?;
+    dbg!(humn);
 
-    let base1 = f1.calc(humn);
-    let base2 = f2.calc(humn);
-    let (mut left, mut right) = (0, 0);
-    loop {
-        let r1 = f1.calc(humn);
-        let r2 = f2.calc(humn);
-        if r1 == r2 {
-            break;
-        } else if r1 <= base1 && r1 > base2 {
-            humn *= 2
-        } else {
-            left = humn / 2;
-            right = humn;
-            break;
-        }
-    }
-    let mut mid = (left + right) / 2;
-    while mid < right {
-        if f1.calc(mid) == f2.calc(mid) {
-            humn = mid;
-            break;
-        } else if f1.calc(mid) < f2.calc(mid) {
-            right = mid
-        } else {
-            left = mid
-        }
-        mid = (left + right) / 2;
-    }
+    // let &humn_id = index.get("humn").unwrap();
+    // let mut humn = monkeys[humn_id as usize].yell.unwrap().unwrap();
+    // let base1 = f1.calc(humn);
+    // let base2 = f2.calc(humn);
+    // let (mut left, mut right) = (0, 0);
+    // loop {
+    //     let r1 = f1.calc(humn);
+    //     let r2 = f2.calc(humn);
+    //     if r1 == r2 {
+    //         break;
+    //     } else if r1 <= base1 && r1 > base2 {
+    //         humn *= 2
+    //     } else {
+    //         left = humn / 2;
+    //         right = humn;
+    //         break;
+    //     }
+    // }
+    // let mut mid = (left + right) / 2;
+    // while mid < right {
+    //     if f1.calc(mid) == f2.calc(mid) {
+    //         humn = mid;
+    //         break;
+    //     } else if f1.calc(mid) < f2.calc(mid) {
+    //         right = mid
+    //     } else {
+    //         left = mid
+    //     }
+    //     mid = (left + right) / 2;
+    // }
 
     writeln!(io::stdout(), "Part2: {:?}", humn)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
@@ -131,12 +133,78 @@ fn dfs(
     }
 }
 
+fn solve(f1: &Formula, f2: &Formula) -> Result<Integer> {
+    eprintln!("Solve: {} = {}", f1.pretty(), f2.pretty());
+    match (f1, f2) {
+        (Formula::List(v), Formula::Number(op1)) => {
+            if v.len() == 0 {
+                return Ok(*op1);
+            }
+            let op = v[1].get_op().unwrap();
+            let mut op2 = None;
+            let mut next_f = None;
+            let mut op_index = 0;
+            for (i, f) in v.iter().enumerate() {
+                match f {
+                    Formula::Number(n) => {
+                        op2 = {
+                            op_index = i;
+                            Some(*n)
+                        }
+                    }
+                    Formula::Operation(_) => (),
+                    Formula::List(_) => next_f = Some(f),
+                }
+            }
+            let mut op1 = *op1;
+            if let Some(op2) = op2 {
+                if op == '*' || op == '+' || op_index == 2 {
+                    op1 = calc_rev(&op, op1, op2)
+                } else if op_index == 0 {
+                    if op == '/' {
+                        op1 = op2 / op1
+                    } else if op == '-' {
+                        op1 = op2 - op1
+                    } else {
+                        unreachable!()
+                    }
+                } else {
+                    unreachable!()
+                }
+                if let Some(f) = next_f {
+                    return solve(f, &Formula::Number(op1));
+                }
+            }
+            return err!("can not solve {}={}", f1.pretty(), f2.pretty());
+        }
+        (Formula::Number(_), Formula::List(_)) => solve(f2, f1),
+        (Formula::List(_), Formula::List(_)) => {
+            return err!("can not solve {}={}", f1.pretty(), f2.pretty())
+        }
+        (Formula::Number(_), Formula::Number(_)) => {
+            return err!("can not solve {}={}", f1.pretty(), f2.pretty())
+        }
+        (Formula::Operation(_), _) => return err!("can not solve {}={}", f1.pretty(), f2.pretty()),
+        (_, Formula::Operation(_)) => return err!("can not solve {}={}", f1.pretty(), f2.pretty()),
+    }
+}
+
 fn calc(op: &char, op1: Integer, op2: Integer) -> Integer {
     match op {
         '+' => op1 + op2,
         '-' => op1 - op2,
         '*' => op1 * op2,
         '/' => op1 / op2,
+        _ => unreachable!(),
+    }
+}
+
+fn calc_rev(op: &char, op1: Integer, op2: Integer) -> Integer {
+    match op {
+        '+' => op1 - op2,
+        '-' => op1 + op2,
+        '*' => op1 / op2,
+        '/' => op1 * op2,
         _ => unreachable!(),
     }
 }
@@ -366,5 +434,5 @@ fn example_input() {
     let (monkeys, index) = parse_input(input).unwrap();
     assert_eq!(monkeys.len(), input.lines().count());
     assert_eq!(152, part1(&monkeys, &index).unwrap());
-    assert_eq!(302, part2(&monkeys, &index).unwrap());
+    assert_eq!(301, part2(&monkeys, &index).unwrap());
 }
