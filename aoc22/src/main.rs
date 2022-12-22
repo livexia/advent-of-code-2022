@@ -144,7 +144,6 @@ impl State {
             }
             Movement::L | Movement::R => unreachable!("This movemen is a turn, can not go stright"),
         }
-        // println!("{:?}", real_path);
     }
 
     fn password(&self) -> i32 {
@@ -154,21 +153,21 @@ impl State {
     fn part2_go_stright(&mut self, map: &Map, step: i32) {
         // manual write edges
         let edges = vec![
-            // outside the edge
-            ((0, 50), (50, 50)),      // 0 face 1 left edge
-            ((0, 50), (0, 100)),      // 1 face 1 top edge
-            ((0, 100), (0, 150)),     // 2 face 2 top edge
-            ((0, 150), (50, 150)),    // 3 face 2 right edge
-            ((50, 100), (50, 150)),   // 4 face 2 bottom edge
-            ((50, 50), (100, 50)),    // 5 face 3 left edge
-            ((50, 100), (100, 100)),  // 6 face 3 right edge
-            ((100, 0), (150, 0)),     // 7 face 4 left edge
-            ((100, 0), (100, 50)),    // 8 face 4 top edge
-            ((100, 100), (150, 100)), // 9 face 5 right edge
-            ((150, 50), (150, 100)),  // 10 face 5 bottom edge
-            ((150, 0), (200, 0)),     // 11 face 6 left edge
-            ((200, 0), (200, 50)),    // 12 face 6 bottom edge
-            ((150, 50), (200, 50)),   // 13 face 6 right edge
+            // on the edge
+            ((0, 50), (49, 50)),    // 0 face 1 left edge
+            ((0, 50), (0, 99)),     // 1 face 1 top edge
+            ((0, 100), (0, 149)),   // 2 face 2 top edge
+            ((0, 149), (49, 149)),  // 3 face 2 right edge
+            ((49, 100), (49, 149)), // 4 face 2 bottom edge
+            ((50, 50), (99, 50)),   // 5 face 3 left edge
+            ((50, 99), (99, 99)),   // 6 face 3 right edge
+            ((100, 0), (149, 0)),   // 7 face 4 left edge
+            ((100, 0), (100, 49)),  // 8 face 4 top edge
+            ((100, 99), (149, 99)), // 9 face 5 right edge
+            ((149, 50), (149, 99)), // 10 face 5 bottom edge
+            ((150, 0), (199, 0)),   // 11 face 6 left edge
+            ((199, 0), (199, 49)),  // 12 face 6 bottom edge
+            ((150, 49), (199, 49)), // 13 face 6 right edge
         ];
 
         // facing
@@ -195,9 +194,6 @@ impl State {
 
         let mut cur_step = 0;
         while cur_step < step {
-            if wrap(self, &connected_edges) {
-                cur_step += 1;
-            }
             let coord = self.move_with_facing()(self.coord());
             if let Some(t) = map.get(&coord) {
                 cur_step += 1;
@@ -208,33 +204,44 @@ impl State {
                     Tile::Wall => break,
                 }
             } else {
-                (self.row, self.column) = coord;
+                // on the edge
+                if let Some(flag) = wrap(self, &connected_edges, map) {
+                    if flag {
+                        cur_step += 1;
+                    } else {
+                        unreachable!()
+                    }
+                } else {
+                    // on the other face still a wall
+                    break;
+                }
             }
         }
 
-        fn wrap(state: &mut State, edges: &[ConnectedEdge]) -> bool {
+        fn wrap(state: &mut State, edges: &[ConnectedEdge], map: &Map) -> Option<bool> {
             for (e1, e2, (f1, f2)) in edges {
-                if on_edge(state.coord(), e1) && state.facing == *f1 {
-                    if inside_edge(&state.coord(), e1) {
-                        println!(
-                            " wrapping {:?} on edge: {:?} next facing: {} next edge: {:?}, next coord: {:?}",
-                            state,
-                            e1,
-                            f2,
-                            e2,
-                            wrap_coord(state.coord(), e1, e2)
-                        );
-                        state.facing = *f2;
-                        (state.row, state.column) = wrap_coord(state.coord(), e1, e2);
-                        return true;
+                if on_edge(&state.coord(), e1) && state.facing == *f1 {
+                    let next_coord = wrap_coord(state.coord(), e1, e2);
+                    if let Some(t) = map.get(&next_coord) {
+                        match t {
+                            Tile::Open => {
+                                state.facing = *f2;
+                                (state.row, state.column) = next_coord;
+                                return Some(true);
+                            }
+                            Tile::Wall => return None,
+                        }
+                    } else {
+                        unreachable!()
                     }
                 }
             }
-            false
+            Some(false)
         }
 
-        fn on_edge(c: Coord, edge: &Edge) -> bool {
-            (c.0 == edge.0 .0 && c.0 == edge.1 .0) || (c.1 == edge.0 .1 && c.1 == edge.1 .1)
+        fn on_edge(c: &Coord, edge: &Edge) -> bool {
+            ((c.0 == edge.0 .0 && c.0 == edge.1 .0) || (c.1 == edge.0 .1 && c.1 == edge.1 .1))
+                && dis(&edge.0, &edge.1) == dis(c, &edge.0) + dis(c, &edge.1)
         }
 
         fn row_edge(edge: &Edge) -> bool {
@@ -260,20 +267,16 @@ impl State {
                 v1 = (dest.0 .0 - d_col, dest.0 .1 - d_row);
                 v2 = (dest.0 .0 + d_col, dest.0 .1 + d_row);
             }
-            if inside_edge(&v1, dest) {
+            if on_edge(&v1, dest) {
                 return v1;
             } else {
-                assert!(inside_edge(&v2, dest));
+                assert!(on_edge(&v2, dest));
                 return v2;
             }
         }
 
         fn dis(c1: &Coord, c2: &Coord) -> i32 {
             (c1.0.abs_diff(c2.0) + c1.1.abs_diff(c2.1)) as i32
-        }
-
-        fn inside_edge(c: &Coord, edge: &Edge) -> bool {
-            dis(&edge.0, &edge.1) == dis(c, &edge.0) + dis(c, &edge.1)
         }
     }
 }
