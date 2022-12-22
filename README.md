@@ -40,6 +40,8 @@
     - 输入的过程中检测边，确定边的范围
     - 计算边与边之间的对应关系，以及对应边的方向关系
     - 根据边在面上的位置确定移动方向的变化
+- **通用的方法**
+    - https://www.reddit.com/r/adventofcode/comments/zsct8w/comment/j184mn7
 
 ## Day 21
 
