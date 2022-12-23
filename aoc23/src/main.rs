@@ -18,19 +18,35 @@ fn main() -> Result<()> {
     let ground: Ground = input.parse()?;
 
     part1(&mut ground.clone())?;
-    // part2()?;
+    part2(&mut ground.clone())?;
     Ok(())
 }
 
 fn part1(ground: &mut Ground) -> Result<Integer> {
     let start = Instant::now();
-    ground.rounds(10);
+    for _ in 0..10 {
+        ground.round();
+    }
     let result = ground.smallest_rectangle_tiles() - ground.elves.len() as Integer;
-    dbg!(result);
 
     writeln!(io::stdout(), "Part1: {:?}", result)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(result)
+}
+
+fn part2(ground: &mut Ground) -> Result<Integer> {
+    let start = Instant::now();
+    let mut round = 0;
+    loop {
+        round += 1;
+        if ground.round() {
+            break;
+        }
+    }
+
+    writeln!(io::stdout(), "Part2: {:?}", round)?;
+    writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
+    Ok(round)
 }
 
 fn north(pos: &Pos) -> Pos {
@@ -108,45 +124,55 @@ impl Ground {
             .any(|s| self.elves.contains(&Ground::next(*pos, s)))
     }
 
-    fn rounds(&mut self, time: usize) {
+    fn round(&mut self) -> bool {
         // println!("{}", self.draw());
-        for _ in 0..time {
-            // first half round
-            let mut next_move: HashMap<Pos, Vec<Pos>> = HashMap::new();
-            for &pos in &self.elves {
-                let mut flag = true;
-                if !self.any_adjacent(&pos) {
-                    next_move.entry(pos).or_insert(vec![]).push(pos);
-                    continue;
-                }
-                for dir in &self.dir {
-                    if dir[..3]
-                        .iter()
-                        .all(|s| !self.elves.contains(&Ground::next(pos, s)))
-                    {
-                        let next = Ground::next(pos, &dir[3]);
-                        next_move.entry(next).or_insert(vec![]).push(pos);
-                        flag = false;
-                        break;
-                    }
-                }
-                if flag {
-                    // no move made stay at the same position
-                    next_move.entry(pos).or_insert(vec![]).push(pos);
+        let elves_count = self.elves.len();
+        // first half round
+        let mut possible_move: HashMap<Pos, Vec<Pos>> = HashMap::new();
+        let mut next_move = HashSet::new();
+        for &pos in &self.elves {
+            let mut flag = true;
+            if !self.any_adjacent(&pos) {
+                next_move.insert(pos);
+                continue;
+            }
+            for dir in &self.dir {
+                if dir[..3]
+                    .iter()
+                    .all(|s| !self.elves.contains(&Ground::next(pos, s)))
+                {
+                    let next = Ground::next(pos, &dir[3]);
+                    possible_move.entry(next).or_insert(vec![]).push(pos);
+                    flag = false;
+                    break;
                 }
             }
-            // second half round
-            let elves: HashSet<_> = next_move
-                .into_iter()
-                .map(|(p, v)| if v.len() == 1 { vec![p] } else { v })
-                .flatten()
-                .collect();
-            self.elves = elves;
-            // rotate the direction
-            let first_dir = self.dir.remove(0);
-            self.dir.push(first_dir);
-            // println!("{}", self.draw());
+            if flag {
+                // no move made stay at the same position
+                next_move.insert(pos);
+            }
         }
+        let mut not_moved = next_move.len();
+        // second half round
+        possible_move.into_iter().for_each(|(p, v)| {
+            if v.len() == 1 {
+                next_move.insert(p);
+            } else {
+                not_moved += v.len();
+                next_move.extend(v);
+            }
+        });
+        // println!("out of {}/{} elves didn't move", not_moved, elves_count);
+        if not_moved == elves_count {
+            return true;
+        }
+        assert_eq!(next_move.len(), elves_count);
+        self.elves = next_move;
+        // rotate the direction
+        let first_dir = self.dir.remove(0);
+        self.dir.push(first_dir);
+        // println!("{}", self.draw());
+        false
     }
 
     fn smallest_rectangle_tiles(&self) -> Integer {
@@ -215,4 +241,5 @@ fn example_input() {
     .#..#..";
     let ground: Ground = input.parse().unwrap();
     assert_eq!(part1(&mut ground.clone()).unwrap(), 110);
+    assert_eq!(part2(&mut ground.clone()).unwrap(), 20);
 }
