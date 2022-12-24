@@ -1,5 +1,4 @@
-use std::collections::hash_map::Entry;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashSet, VecDeque};
 use std::error::Error;
 use std::io::{self, Read, Write};
 use std::str::FromStr;
@@ -46,12 +45,23 @@ fn part2(map_cache: &[Map], start_pos: (usize, usize), end_pos: (usize, usize)) 
 
 fn build_map_cache(map: &mut Map) -> Vec<Map> {
     let mut cache = vec![];
-    let cycle_count = (map.height as i32 - 2) * (map.width as i32 - 2);
+    let cycle_count = lcm(map.height - 2, map.width - 2);
     for _ in 0..cycle_count {
         cache.push(map.clone());
         map.next();
     }
     cache
+}
+
+fn lcm(small: usize, big: usize) -> usize {
+    let mut m = 1;
+    while m < small {
+        if m * big % small == 0 {
+            return m * big;
+        }
+        m += 1;
+    }
+    small * big
 }
 
 fn avoid_blizzards(
@@ -68,27 +78,25 @@ fn avoid_blizzards(
     let mut visited = HashSet::new();
     'find: while let Some((cur, time)) = queue.pop_front() {
         let cycle_time = time % cycle;
-        if visited.contains(&(cur, cycle_time)) {
-            continue;
-        }
-        visited.insert((cur, cycle_time));
-        let map = &map_cache[cycle_time];
-        let (x, y) = cur;
-        for next in [
-            (x.saturating_sub(1), y),
-            (x + 1, y),
-            (x, y + 1),
-            (x, y.saturating_sub(1)),
-        ] {
-            if next == end {
-                find_time = time;
-                break 'find;
-            } else if map.moveable(next.0, next.1) {
-                queue.push_back((next, time + 1));
+        if visited.insert((cur, cycle_time)) {
+            let map = &map_cache[cycle_time];
+            let (x, y) = cur;
+            for next in [
+                (x.saturating_sub(1), y),
+                (x + 1, y),
+                (x, y + 1),
+                (x, y.saturating_sub(1)),
+            ] {
+                if next == end {
+                    find_time = time;
+                    break 'find;
+                } else if map.moveable(next.0, next.1) {
+                    queue.push_back((next, time + 1));
+                }
             }
-        }
-        if map.moveable(cur.0, cur.1) || cur == start {
-            queue.push_back((cur, time + 1))
+            if map.moveable(cur.0, cur.1) || cur == start {
+                queue.push_back((cur, time + 1))
+            }
         }
     }
     find_time
@@ -96,7 +104,7 @@ fn avoid_blizzards(
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 struct Map {
-    blizzards: Vec<Vec<Vec<char>>>,
+    blizzards: [Vec<u128>; 4], // 0 up, 1 down, 2 right, 3 left
     width: usize,
     height: usize,
     start: (usize, usize),
@@ -105,13 +113,20 @@ struct Map {
 
 impl Map {
     fn next(&mut self) {
-        let mut next_blizzards = vec![vec![vec![]; self.width]; self.height];
+        let mut next_blizzards = [
+            vec![0; self.height],
+            vec![0; self.height],
+            vec![0; self.height],
+            vec![0; self.height],
+        ];
         // start and end never has blizzard
         for x in 1..self.height - 1 {
             for y in 1..self.width - 1 {
-                for &c in &self.blizzards[x][y] {
-                    let (nx, ny) = self.next_pos(x, y, c);
-                    next_blizzards[nx][ny].push(c)
+                for (d, v) in self.blizzards.iter().enumerate() {
+                    if v[x] & (1 << y) != 0 {
+                        let (nx, ny) = self.next_pos(x, y, d);
+                        next_blizzards[d][nx] |= 1 << ny;
+                    }
                 }
             }
         }
@@ -136,12 +151,12 @@ impl Map {
         (nx, ny)
     }
 
-    fn next_pos(&self, x: usize, y: usize, c: char) -> (usize, usize) {
+    fn next_pos(&self, x: usize, y: usize, c: usize) -> (usize, usize) {
         match c {
-            '>' => self.wrap(x, y + 1),
-            '<' => self.wrap(x, y - 1),
-            '^' => self.wrap(x - 1, y),
-            'v' => self.wrap(x + 1, y),
+            0 => self.wrap(x - 1, y),
+            1 => self.wrap(x + 1, y),
+            2 => self.wrap(x, y + 1),
+            3 => self.wrap(x, y - 1),
             _ => unreachable!("{}", c),
         }
     }
@@ -151,10 +166,11 @@ impl Map {
     }
 
     fn moveable(&self, x: usize, y: usize) -> bool {
-        if x == 0 || y == 0 || x >= self.height - 1 || y >= self.width - 1 {
-            return false;
-        }
-        self.blizzards[x][y].is_empty()
+        x > 0
+            && y > 0
+            && x < self.height - 1
+            && y < self.width - 1
+            && self.blizzards.iter().all(|v| v[x] & (1 << y) == 0)
     }
 
     #[allow(dead_code)]
@@ -169,12 +185,30 @@ impl Map {
                     s.push('.')
                 } else if x == 0 || y == 0 || x == self.height - 1 || y == self.width - 1 {
                     s.push('#');
-                } else if self.blizzards[x][y].is_empty() {
-                    s.push('.')
-                } else if self.blizzards[x][y].len() == 1 {
-                    s.push(self.blizzards[x][y][0])
                 } else {
-                    s.push_str(&self.blizzards[x][y].len().to_string())
+                    let mask = 1 << y;
+                    let b: Vec<usize> = self
+                        .blizzards
+                        .iter()
+                        .map(|v| v[x])
+                        .enumerate()
+                        .filter(|(_, b)| b & mask != 0)
+                        .map(|(i, _)| i)
+                        .collect();
+
+                    if b.is_empty() {
+                        s.push('.')
+                    } else if b.len() > 1 {
+                        s.push_str(&b.len().to_string())
+                    } else {
+                        s.push(match b[0] {
+                            0 => '^',
+                            1 => 'v',
+                            2 => '>',
+                            3 => '<',
+                            _ => unreachable!(),
+                        })
+                    }
                 }
             }
             s.push('\n');
@@ -203,26 +237,29 @@ impl FromStr for Map {
             .chars()
             .position(|v| v == '.')
             .unwrap();
-        let blizzards: Vec<Vec<_>> = s
-            .lines()
-            .map(|l| {
-                l.trim()
-                    .chars()
-                    .map(|c| {
-                        if c == '.' || c == '#' {
-                            vec![]
-                        } else {
-                            vec![c]
-                        }
-                    })
-                    .collect()
-            })
-            .collect();
+        let height = s.lines().count();
+        let width = s.lines().next().unwrap().trim().len();
+        let mut blizzards = [vec![], vec![], vec![], vec![]];
+        for (x, line) in s.lines().enumerate() {
+            for dir in &mut blizzards {
+                dir.push(0);
+            }
+            for (y, c) in line.trim().char_indices() {
+                match c {
+                    '#' | '.' => (),
+                    '^' => blizzards[0][x] |= 1 << y,
+                    'v' => blizzards[1][x] |= 1 << y,
+                    '>' => blizzards[2][x] |= 1 << y,
+                    '<' => blizzards[3][x] |= 1 << y,
+                    _ => unreachable!("{c}"),
+                }
+            }
+        }
         Ok(Map {
             start: (0, start),
-            end: (blizzards.len() - 1, end),
-            width: blizzards[0].len(),
-            height: blizzards.len(),
+            end: (height - 1, end),
+            width,
+            height,
             blizzards,
         })
     }
@@ -238,8 +275,8 @@ fn example_input() {
     ######.#";
     let mut map: Map = input.parse().unwrap();
     let (start, end) = map.start_and_end();
-    let map_cache = build_map_cache(&mut map);
     println!("{}", map.draw(start.0, start.1));
+    let map_cache = build_map_cache(&mut map);
     assert_eq!(18, part1(&map_cache, start, end).unwrap());
     assert_eq!(54, part2(&map_cache, start, end).unwrap());
 }
