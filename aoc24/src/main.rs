@@ -56,8 +56,6 @@ fn build_map_cache(map: &mut Map) -> HashMap<usize, Map> {
     let mut cache = std::collections::HashMap::new();
     let mut minutes = 0;
     loop {
-        minutes += 1;
-        map.next();
         let b = map.clone();
         if let Entry::Vacant(e) = cache.entry(b) {
             // cargo clippy suggestion
@@ -65,6 +63,8 @@ fn build_map_cache(map: &mut Map) -> HashMap<usize, Map> {
         } else {
             break;
         }
+        minutes += 1;
+        map.next();
     }
     let cache: HashMap<_, _> = cache.into_iter().map(|(k, v)| (v, k)).collect();
     cache
@@ -83,10 +83,7 @@ fn avoid_blizzards(
     let mut find_time = 0;
     let mut visited = HashSet::new();
     'find: while let Some((cur, time)) = queue.pop_front() {
-        let mut cycle_time = time % cycle;
-        if cycle_time == 0 {
-            cycle_time = cycle;
-        }
+        let cycle_time = time % cycle;
         if visited.contains(&(cur, cycle_time)) {
             continue;
         }
@@ -118,6 +115,8 @@ struct Map {
     blizzards: Vec<Vec<Vec<char>>>,
     width: usize,
     height: usize,
+    start: (usize, usize),
+    end: (usize, usize),
 }
 
 impl Map {
@@ -127,9 +126,6 @@ impl Map {
         for x in 1..self.height - 1 {
             for y in 1..self.width - 1 {
                 for &c in &self.blizzards[x][y] {
-                    if c == '.' || c == '#' {
-                        continue;
-                    }
                     let (nx, ny) = self.next_pos(x, y, c);
                     next_blizzards[nx][ny].push(c)
                 }
@@ -167,32 +163,14 @@ impl Map {
     }
 
     fn start_and_end(&self) -> ((usize, usize), (usize, usize)) {
-        let start = (
-            0,
-            self.blizzards[0].iter().position(|v| v[0] == '.').unwrap(),
-        );
-        let end = (
-            self.height - 1,
-            self.blizzards[self.height - 1]
-                .iter()
-                .position(|v| v[0] == '.')
-                .unwrap(),
-        );
-        (start, end)
+        (self.start, self.end)
     }
 
     fn moveable(&self, x: usize, y: usize) -> bool {
         if x == 0 || y == 0 || x >= self.height - 1 || y >= self.width - 1 {
             return false;
         }
-        for c in &self.blizzards[x][y] {
-            if c == &'.' {
-                continue;
-            } else {
-                return false;
-            }
-        }
-        true
+        self.blizzards[x][y].is_empty()
     }
 
     #[allow(dead_code)]
@@ -202,6 +180,9 @@ impl Map {
             for y in 0..self.width {
                 if x == e_x && y == e_y {
                     s.push('E')
+                } else if (x == 0 && y == self.start.1) || (x == self.height - 1 && y == self.end.1)
+                {
+                    s.push('.')
                 } else if x == 0 || y == 0 || x == self.height - 1 || y == self.width - 1 {
                     s.push('#');
                 } else if self.blizzards[x][y].is_empty() {
@@ -222,11 +203,40 @@ impl FromStr for Map {
     type Err = Box<dyn Error>;
 
     fn from_str(s: &str) -> Result<Self> {
+        let start = s
+            .lines()
+            .next()
+            .unwrap()
+            .trim()
+            .chars()
+            .position(|v| v == '.')
+            .unwrap();
+        let end = s
+            .lines()
+            .last()
+            .unwrap()
+            .trim()
+            .chars()
+            .position(|v| v == '.')
+            .unwrap();
         let blizzards: Vec<Vec<_>> = s
             .lines()
-            .map(|l| l.trim().chars().map(|c| vec![c]).collect())
+            .map(|l| {
+                l.trim()
+                    .chars()
+                    .map(|c| {
+                        if c == '.' || c == '#' {
+                            vec![]
+                        } else {
+                            vec![c]
+                        }
+                    })
+                    .collect()
+            })
             .collect();
         Ok(Map {
+            start: (0, start),
+            end: (blizzards.len() - 1, end),
             width: blizzards[0].len(),
             height: blizzards.len(),
             blizzards,
@@ -245,6 +255,7 @@ fn example_input() {
     let mut map: Map = input.parse().unwrap();
     let (start, end) = map.start_and_end();
     let map_cache = build_map_cache(&mut map);
+    println!("{}", map.draw(start.0, start.1));
     assert_eq!(18, part1(&map_cache, start, end).unwrap());
     assert_eq!(54, part2(&map_cache, start, end).unwrap());
 }
