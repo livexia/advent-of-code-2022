@@ -24,11 +24,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn part1(
-    map_cache: &HashMap<usize, Map>,
-    start_pos: (usize, usize),
-    end_pos: (usize, usize),
-) -> Result<usize> {
+fn part1(map_cache: &[Map], start_pos: (usize, usize), end_pos: (usize, usize)) -> Result<usize> {
     let start = Instant::now();
 
     let find_time = avoid_blizzards(map_cache, start_pos, end_pos, 0);
@@ -37,11 +33,7 @@ fn part1(
     Ok(find_time)
 }
 
-fn part2(
-    map_cache: &HashMap<usize, Map>,
-    start_pos: (usize, usize),
-    end_pos: (usize, usize),
-) -> Result<usize> {
+fn part2(map_cache: &[Map], start_pos: (usize, usize), end_pos: (usize, usize)) -> Result<usize> {
     let start = Instant::now();
 
     let find_time = avoid_blizzards(map_cache, start_pos, end_pos, 0);
@@ -52,26 +44,18 @@ fn part2(
     Ok(find_time)
 }
 
-fn build_map_cache(map: &mut Map) -> HashMap<usize, Map> {
-    let mut cache = std::collections::HashMap::new();
-    let mut minutes = 0;
-    loop {
-        let b = map.clone();
-        if let Entry::Vacant(e) = cache.entry(b) {
-            // cargo clippy suggestion
-            e.insert(minutes);
-        } else {
-            break;
-        }
-        minutes += 1;
+fn build_map_cache(map: &mut Map) -> Vec<Map> {
+    let mut cache = vec![];
+    let cycle_count = (map.height as i32 - 2) * (map.width as i32 - 2);
+    for _ in 0..cycle_count {
+        cache.push(map.clone());
         map.next();
     }
-    let cache: HashMap<_, _> = cache.into_iter().map(|(k, v)| (v, k)).collect();
     cache
 }
 
 fn avoid_blizzards(
-    map_cache: &HashMap<usize, Map>,
+    map_cache: &[Map],
     start: (usize, usize),
     end: (usize, usize),
     start_time: usize,
@@ -88,7 +72,7 @@ fn avoid_blizzards(
             continue;
         }
         visited.insert((cur, cycle_time));
-        let map = map_cache.get(&cycle_time).unwrap();
+        let map = &map_cache[cycle_time];
         let (x, y) = cur;
         for next in [
             (x.saturating_sub(1), y),
