@@ -104,7 +104,7 @@ fn avoid_blizzards(
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 struct Map {
-    blizzards: [Vec<u128>; 4], // 0 up, 1 down, 2 right, 3 left
+    blizzards: Vec<[u128; 4]>, // 0 up, 1 down, 2 right, 3 left
     width: usize,
     height: usize,
     start: (usize, usize),
@@ -113,19 +113,14 @@ struct Map {
 
 impl Map {
     fn next(&mut self) {
-        let mut next_blizzards = [
-            vec![0; self.height],
-            vec![0; self.height],
-            vec![0; self.height],
-            vec![0; self.height],
-        ];
+        let mut next_blizzards = vec![[0; 4]; self.height];
         // start and end never has blizzard
         for x in 1..self.height - 1 {
             for y in 1..self.width - 1 {
-                for (d, v) in self.blizzards.iter().enumerate() {
-                    if v[x] & (1 << y) != 0 {
+                for (d, v) in self.blizzards[x].iter().enumerate() {
+                    if v & (1 << y) != 0 {
                         let (nx, ny) = self.next_pos(x, y, d);
-                        next_blizzards[d][nx] |= 1 << ny;
+                        next_blizzards[nx][d] |= 1 << ny;
                     }
                 }
             }
@@ -170,7 +165,7 @@ impl Map {
             && y > 0
             && x < self.height - 1
             && y < self.width - 1
-            && self.blizzards.iter().all(|v| v[x] & (1 << y) == 0)
+            && self.blizzards[x].iter().all(|v| v & (1 << y) == 0)
     }
 
     #[allow(dead_code)]
@@ -187,12 +182,10 @@ impl Map {
                     s.push('#');
                 } else {
                     let mask = 1 << y;
-                    let b: Vec<usize> = self
-                        .blizzards
+                    let b: Vec<usize> = self.blizzards[x]
                         .iter()
-                        .map(|v| v[x])
                         .enumerate()
-                        .filter(|(_, b)| b & mask != 0)
+                        .filter(|(_, &b)| b & mask != 0)
                         .map(|(i, _)| i)
                         .collect();
 
@@ -239,18 +232,16 @@ impl FromStr for Map {
             .unwrap();
         let height = s.lines().count();
         let width = s.lines().next().unwrap().trim().len();
-        let mut blizzards = [vec![], vec![], vec![], vec![]];
+        let mut blizzards = vec![[0; 4]; height];
         for (x, line) in s.lines().enumerate() {
-            for dir in &mut blizzards {
-                dir.push(0);
-            }
             for (y, c) in line.trim().char_indices() {
+                let row = &mut blizzards[x];
                 match c {
                     '#' | '.' => (),
-                    '^' => blizzards[0][x] |= 1 << y,
-                    'v' => blizzards[1][x] |= 1 << y,
-                    '>' => blizzards[2][x] |= 1 << y,
-                    '<' => blizzards[3][x] |= 1 << y,
+                    '^' => row[0] |= 1 << y,
+                    'v' => row[1] |= 1 << y,
+                    '>' => row[2] |= 1 << y,
+                    '<' => row[3] |= 1 << y,
                     _ => unreachable!("{c}"),
                 }
             }
