@@ -64,13 +64,13 @@ fn move_tail(head: Coord, tail: Coord) -> Coord {
     let d = distance(head, tail);
     if d < 2 {
         // touch or cover
-        return tail;
+        tail
     } else if head.0 - tail.0 == 0 || head.1 - tail.1 == 0 {
         // same row or column
-        return ((tail.0 + head.0) / 2, (tail.1 + head.1) / 2);
+        ((tail.0 + head.0) / 2, (tail.1 + head.1) / 2)
     } else if d == 2 {
         // diagonally
-        return tail;
+        tail
     } else if d > 2 {
         // need move diagonally should be only one possible way
         for (dx, dy) in [(1, 1), (1, -1), (-1, 1), (-1, -1)] {
@@ -122,7 +122,7 @@ impl FromStr for Move {
     type Err = Box<dyn Error>;
 
     fn from_str(s: &str) -> Result<Self> {
-        if let Some((d, steps)) = s.split_once(" ") {
+        if let Some((d, steps)) = s.split_once(' ') {
             if let Ok(steps) = steps.parse::<Step>() {
                 match d {
                     "L" => Ok(Move::Left(steps)),

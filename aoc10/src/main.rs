@@ -11,7 +11,7 @@ type Result<T> = ::std::result::Result<T, Box<dyn Error>>;
 fn main() -> Result<()> {
     let mut input = String::new();
     io::stdin().read_to_string(&mut input)?;
-    let cpu = CPU::new(
+    let cpu = Cpu::new(
         input
             .lines()
             .map(|l| l.parse())
@@ -23,7 +23,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn part1(mut cpu: CPU) -> Result<()> {
+fn part1(mut cpu: Cpu) -> Result<()> {
     let mut strengths = 0;
     for c in 1..300 {
         // during cycles start with 1
@@ -35,14 +35,13 @@ fn part1(mut cpu: CPU) -> Result<()> {
     }
     writeln!(
         io::stdout(),
-        "Part1: What is the sum of these six signal strengths? {}",
-        strengths
+        "Part1: What is the sum of these six signal strengths? {strengths}",
     )?;
     Ok(())
 }
 
-fn part2(mut cpu: CPU) -> Result<()> {
-    let mut crt = CRT::new();
+fn part2(mut cpu: Cpu) -> Result<()> {
+    let mut crt = Crt::new();
     for _ in 0..300 {
         // draw a single pixel during each cycle
         // need draw before cycle
@@ -54,15 +53,15 @@ fn part2(mut cpu: CPU) -> Result<()> {
     Ok(())
 }
 
-struct CRT {
+struct Crt {
     screen: [[bool; 40]; 6],
     cur_row: usize,
     cur_pos: usize,
 }
 
-impl CRT {
+impl Crt {
     fn new() -> Self {
-        CRT {
+        Crt {
             screen: [[false; 40]; 6],
             cur_row: 0,
             cur_pos: 0,
@@ -103,16 +102,16 @@ impl CRT {
 }
 
 #[derive(Debug, Clone)]
-struct CPU {
+struct Cpu {
     register: i32,
     program: Vec<Instruction>,
     pc: usize,   // program counter
     cycle: bool, // is current instruction still need one more cycle to run
 }
 
-impl CPU {
+impl Cpu {
     fn new(instructions: Vec<Instruction>) -> Self {
-        CPU {
+        Cpu {
             register: 1,
             program: instructions,
             pc: 0,
@@ -155,7 +154,7 @@ impl FromStr for Instruction {
         if s.trim() == "noop" {
             return Ok(Instruction::Noop);
         }
-        if let Some((instr, op)) = s.split_once(" ") {
+        if let Some((instr, op)) = s.split_once(' ') {
             if instr.trim() == "addx" {
                 let op: i32 = op.parse()?;
                 return Ok(Instruction::Addx(op));

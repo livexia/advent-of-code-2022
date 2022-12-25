@@ -15,10 +15,10 @@ type Pos = (Integer, Integer);
 fn main() -> Result<()> {
     let mut input = String::new();
     io::stdin().read_to_string(&mut input)?;
-    let ground: Ground = input.parse()?;
+    let mut ground: Ground = input.parse()?;
 
     part1(&mut ground.clone())?;
-    part2(&mut ground.clone())?;
+    part2(&mut ground)?;
     Ok(())
 }
 
@@ -29,7 +29,7 @@ fn part1(ground: &mut Ground) -> Result<Integer> {
     }
     let result = ground.smallest_rectangle_tiles() - ground.elves.len() as Integer;
 
-    writeln!(io::stdout(), "Part1: {:?}", result)?;
+    writeln!(io::stdout(), "Part1: {result}")?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(result)
 }
@@ -44,7 +44,7 @@ fn part2(ground: &mut Ground) -> Result<Integer> {
         }
     }
 
-    writeln!(io::stdout(), "Part2: {:?}", round)?;
+    writeln!(io::stdout(), "Part2: {round}")?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(round)
 }
@@ -184,9 +184,10 @@ impl Ground {
             max_x = x.max(max_x);
             max_y = y.max(max_y);
         }
-        return (max_x - min_x + 1) * (max_y - min_y + 1);
+        (max_x - min_x + 1) * (max_y - min_y + 1)
     }
 
+    #[allow(dead_code)]
     fn draw(&self) -> String {
         let (mut min_x, mut min_y) = (Integer::MAX, Integer::MAX);
         let (mut max_x, mut max_y) = (Integer::MIN, Integer::MIN);

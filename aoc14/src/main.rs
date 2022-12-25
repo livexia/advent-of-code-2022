@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::error::Error;
 use std::io::{self, Read, Write};
 use std::str::FromStr;
@@ -19,7 +18,7 @@ fn main() -> Result<()> {
         .collect::<Result<Vec<Vec<Coord>>>>()?;
     let cave = Cave::new(&paths);
     part1(cave.clone())?;
-    part2(cave.clone())?;
+    part2(cave)?;
     Ok(())
 }
 
@@ -27,7 +26,7 @@ fn part1(mut cave: Cave) -> Result<()> {
     let start = Instant::now();
 
     let result = cave.sand_fall_part1();
-    writeln!(io::stdout(), "Part1: {}", result)?;
+    writeln!(io::stdout(), "Part1: {result}")?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(())
 }
@@ -36,7 +35,7 @@ fn part2(mut cave: Cave) -> Result<()> {
     let start = Instant::now();
 
     let result = cave.sand_fall_part2();
-    writeln!(io::stdout(), "Part2: {}", result)?;
+    writeln!(io::stdout(), "Part2: {result}",)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(())
 }
@@ -103,7 +102,7 @@ impl Cave {
     fn sand_fall_part1(&mut self) -> usize {
         let mut count = 0;
         let mut cur = self.sand_src;
-        while !self.into_abyss(&cur) {
+        while !self.in_abyss(&cur) {
             let next = cur.down();
             if !self.is_blocked(&next) {
                 cur = next;
@@ -141,7 +140,7 @@ impl Cave {
         self.grid[c.x - self.min_x][c.y] = Material::Sand
     }
 
-    fn into_abyss(&self, c: &Coord) -> bool {
+    fn in_abyss(&self, c: &Coord) -> bool {
         c.y > self.max_y - 3 || c.x < self.min_x || c.x >= self.max_x
     }
 
@@ -175,6 +174,7 @@ impl Cave {
         count
     }
 
+    #[allow(dead_code)]
     fn draw_cave(&self) -> String {
         use Material::*;
 
@@ -234,7 +234,7 @@ impl Coord {
         } else {
             (other, self)
         };
-        (start.clone(), end.clone())
+        (*start, *end)
     }
 
     fn down(self) -> Self {
@@ -263,7 +263,7 @@ impl FromStr for Coord {
     type Err = Box<dyn Error>;
 
     fn from_str(s: &str) -> Result<Self> {
-        if let Some((x, y)) = s.split_once(",") {
+        if let Some((x, y)) = s.split_once(',') {
             return Ok(Coord {
                 x: x.parse()?,
                 y: y.parse()?,

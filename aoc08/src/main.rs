@@ -2,6 +2,7 @@ use std::error::Error;
 use std::io::{self, Read, Write};
 use std::vec;
 
+#[allow(unused_macros)]
 macro_rules! err {
     ($($tt:tt)*) => { Err(Box::<dyn Error>::from(format!($($tt)*))) }
 }
@@ -29,17 +30,16 @@ fn part1(map: &[Vec<u8>]) -> Result<()> {
 
     for i in 0..height {
         for j in 0..width {
-            visible[i][j] |= is_on_edge(visible_at((i, j), &map, 0, move_left), height, width)
-                | is_on_edge(visible_at((i, j), &map, width, move_right), height, width)
-                | is_on_edge(visible_at((i, j), &map, 0, move_up), height, width)
-                | is_on_edge(visible_at((i, j), &map, height, move_down), height, width);
+            visible[i][j] |= is_on_edge(visible_at((i, j), map, 0, move_left), height, width)
+                | is_on_edge(visible_at((i, j), map, width, move_right), height, width)
+                | is_on_edge(visible_at((i, j), map, 0, move_up), height, width)
+                | is_on_edge(visible_at((i, j), map, height, move_down), height, width);
         }
     }
     let count = visible.iter().flatten().filter(|&&b| b).count();
     writeln!(
         io::stdout(),
-        "how many trees are visible from outside the grid? {}",
-        count
+        "how many trees are visible from outside the grid? {count}",
     )?;
 
     Ok(())
@@ -56,16 +56,16 @@ fn part2(map: &[Vec<u8>]) -> Result<()> {
             if scores[i][j] == 0 {
                 continue;
             }
-            let p = visible_at((i, j), &map, 0, move_left);
+            let p = visible_at((i, j), map, 0, move_left);
             scores[i][j] *= visible_tree((i, j), p, height, width);
 
-            let p = visible_at((i, j), &map, width, move_right);
+            let p = visible_at((i, j), map, width, move_right);
             scores[i][j] *= visible_tree((i, j), p, height, width);
 
-            let p = visible_at((i, j), &map, 0, move_up);
+            let p = visible_at((i, j), map, 0, move_up);
             scores[i][j] *= visible_tree((i, j), p, height, width);
 
-            let p = visible_at((i, j), &map, height, move_down);
+            let p = visible_at((i, j), map, height, move_down);
             scores[i][j] *= visible_tree((i, j), p, height, width);
         }
     }
@@ -73,8 +73,7 @@ fn part2(map: &[Vec<u8>]) -> Result<()> {
 
     writeln!(
         io::stdout(),
-        "What is the highest scenic score possible for any tree? {}",
-        max_score
+        "What is the highest scenic score possible for any tree? {max_score}",
     )?;
     Ok(())
 }

@@ -6,6 +6,7 @@ use std::time::Instant;
 
 use regex::Regex;
 
+#[allow(unused_macros)]
 macro_rules! err {
     ($($tt:tt)*) => { Err(Box::<dyn Error>::from(format!($($tt)*))) }
 }
@@ -18,7 +19,7 @@ fn main() -> Result<()> {
     let mut input = String::new();
     io::stdin().read_to_string(&mut input)?;
     let mut sensors = parse_report(&input)?;
-    sensors.sort_by(|s1, s2| s1.min_x().cmp(&s2.min_x()));
+    sensors.sort_by_key(|s| s.min_x());
 
     part1(&sensors, 2000000)?;
     part2(&sensors, 4000000)?;
@@ -37,7 +38,7 @@ fn part1(sensors: &[Sensor], y: CoordType) -> Result<CoordType> {
             sensors.iter().any(|s| !s.could_be_beacon((x, y)))
         })
         .count();
-    writeln!(io::stdout(), "Part1: {}", result)?;
+    writeln!(io::stdout(), "Part1: {result}",)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(result as CoordType)
 }
@@ -65,7 +66,7 @@ fn part2(sensors: &[Sensor], max: CoordType) -> Result<CoordType> {
         }
     }
 
-    writeln!(io::stdout(), "Part2: {}", result)?;
+    writeln!(io::stdout(), "Part2: {result}",)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(result)
 }
@@ -83,7 +84,7 @@ fn part1_with_interval(sensors: &[Sensor], y: CoordType) -> Result<CoordType> {
             .filter(|b| b.1 == y)
             .collect::<HashSet<_>>()
             .len() as CoordType;
-    writeln!(io::stdout(), "Part1 with interval: {}", result)?;
+    writeln!(io::stdout(), "Part1 with interval: {result}",)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(result)
 }
@@ -95,12 +96,12 @@ fn part2_with_interval(sensors: &[Sensor], max: CoordType) -> Result<CoordType> 
     while y <= max {
         let (intervals, temp) = intervals_at(sensors, y);
         if intervals.len() > 1 {
-            result = y + 4000000 * (intervals[0].1 + 1) / 2;
+            result = y + 4000000 * (intervals[0].1 + 1);
             break;
         }
         y += (temp + 1) / 2;
     }
-    writeln!(io::stdout(), "Part2 with interval: {}", result)?;
+    writeln!(io::stdout(), "Part2 with interval: {result}",)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(result)
 }
@@ -137,9 +138,11 @@ impl Sensor {
     fn max_x(&self) -> CoordType {
         self.coord.0 + self.closest_dis
     }
+    #[allow(dead_code)]
     fn min_y(&self) -> CoordType {
         self.coord.1 - self.closest_dis
     }
+    #[allow(dead_code)]
     fn max_y(&self) -> CoordType {
         self.coord.1 + self.closest_dis
     }
@@ -160,6 +163,7 @@ impl Sensor {
         (x1.max(x2), y)
     }
 
+    #[allow(dead_code)]
     fn furthest_vertical(&self, c: Coord) -> Coord {
         let x = c.0;
         let y1 = self.closest_dis - (x - self.coord.0).abs() + self.coord.1;

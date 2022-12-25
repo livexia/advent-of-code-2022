@@ -28,7 +28,7 @@ fn part1(map: &Map, path: &[Movement]) -> Result<i32> {
     state.follow_the_path(map, path, 1);
     let password = state.password();
 
-    writeln!(io::stdout(), "Part1: {:?}", password)?;
+    writeln!(io::stdout(), "Part1: {password}")?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(password)
 }
@@ -41,7 +41,7 @@ fn part2(map: &mut Map, path: &[Movement], size: i32) -> Result<i32> {
     state.follow_the_path(map, path, 2);
     let password = state.password();
 
-    writeln!(io::stdout(), "Part2: {:?}", password)?;
+    writeln!(io::stdout(), "Part2: {password}",)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(password)
 }
@@ -270,10 +270,10 @@ impl State {
                 v2 = (dest.0 .0 + d_col, dest.0 .1 + d_row);
             }
             if on_edge(&v1, dest) {
-                return v1;
+                v1
             } else {
                 assert!(on_edge(&v2, dest));
-                return v2;
+                v2
             }
         }
 
@@ -306,6 +306,7 @@ impl Map {
         self.cube_size = size;
     }
 
+    #[allow(dead_code)]
     fn draw(&self) -> String {
         let mut s = String::new();
         for x in 0..self.bottom_right.0 {
@@ -330,7 +331,7 @@ impl Map {
                 return Ok((0, y));
             }
         }
-        return err!("There is not open tile on the first row");
+        err!("There is not open tile on the first row")
     }
 }
 
@@ -414,7 +415,7 @@ fn example_input() {
         ......#.
 
 10R5L5R10L4R5L5";
-    let (mut map, path) = parse_input(input).unwrap();
+    let (map, path) = parse_input(input).unwrap();
     assert_eq!(part1(&map, &path).unwrap(), 6032);
     // assert_eq!(part2(&mut map, &path, 4).unwrap(), 5031); // part 2 only work for my input
 }

@@ -2,6 +2,7 @@ use std::error::Error;
 use std::io::{self, Read, Write};
 use std::time::Instant;
 
+#[allow(unused_macros)]
 macro_rules! err {
     ($($tt:tt)*) => { Err(Box::<dyn Error>::from(format!($($tt)*))) }
 }
@@ -27,7 +28,7 @@ fn part1(nums: &[(i64, usize)]) -> Result<i64> {
     let result = [1000, 2000, 3000].iter().fold(0, |sum, &offset| {
         sum + nums[(zero_index + offset) % nums.len()].0
     });
-    writeln!(io::stdout(), "Part1: {}", result)?;
+    writeln!(io::stdout(), "Part1: {result}",)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(result)
 }
@@ -47,7 +48,7 @@ fn part2(nums: &[(i64, usize)]) -> Result<i64> {
     let result = [1000, 2000, 3000].iter().fold(0, |sum, &offset| {
         sum + nums[(zero_index + offset) % nums.len()].0
     });
-    writeln!(io::stdout(), "Part2: {}", result)?;
+    writeln!(io::stdout(), "Part2: {result}",)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(result)
 }
@@ -89,7 +90,7 @@ fn part2_in_place(nums: &[(i64, usize)]) -> Result<i64> {
             .unwrap()
             .0
     });
-    writeln!(io::stdout(), "Part2 with in place vec: {}", result)?;
+    writeln!(io::stdout(), "Part2 with in place vec: {result}",)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(result)
 }
