@@ -53,11 +53,10 @@ fn with_stack(input: &str) -> Result<()> {
     let total_size = compute_dir_size(&sub_dirs, &mut sizes, "/");
 
     // Part 1
-    let result: usize = sizes.values().filter(|&&s| s <= 1000000).sum();
+    let result: usize = sizes.values().filter(|&&s| s <= 100000).sum();
     writeln!(
         io::stdout(),
-        "What is the sum of the total sizes of those directories? {}",
-        result
+        "What is the sum of the total sizes of those directories? {result}",
     )?;
 
     // Part 2
@@ -69,8 +68,7 @@ fn with_stack(input: &str) -> Result<()> {
         .unwrap();
     writeln!(
         io::stdout(),
-        "What is the total size of that directory? {}",
-        result
+        "What is the total size of that directory? {result}",
     )?;
     Ok(())
 }
@@ -147,8 +145,7 @@ fn part1(dirs: &Dirs, threshold: usize) -> Result<()> {
         .sum();
     writeln!(
         io::stdout(),
-        "What is the sum of the total sizes of those directories? {}",
-        result
+        "What is the sum of the total sizes of those directories? {result}",
     )?;
     Ok(())
 }
@@ -164,8 +161,7 @@ fn part2(dirs: &Dirs) -> Result<()> {
         .unwrap();
     writeln!(
         io::stdout(),
-        "What is the total size of that directory? {}",
-        result
+        "What is the total size of that directory? {result}",
     )?;
     Ok(())
 }
