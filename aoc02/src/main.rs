@@ -25,7 +25,7 @@ fn part1(input: &str) -> Result<()> {
         .map(|(f, l)| (f.parse().unwrap(), l.parse().unwrap()))
         .collect();
     let score = rounds.iter().fold(0, |score, &(a, b)| (b - a) + score);
-    writeln!(io::stdout(), "What would your total score be if everything goes exactly according to your strategy guide? {}", score)?;
+    writeln!(io::stdout(), "What would your total score be if everything goes exactly according to your strategy guide? {score}")?;
     Ok(())
 }
 
@@ -39,18 +39,18 @@ fn part2(input: &str) -> Result<()> {
         .fold(0, |score, (shape, outcome)| {
             score
                 + match (shape, outcome) {
-                    (Rock, Lose) => 3 + 0,
+                    (Rock, Lose) => 3,
                     (Rock, Draw) => 1 + 3,
                     (Rock, Win) => 2 + 6,
-                    (Paper, Lose) => 1 + 0,
+                    (Paper, Lose) => 1,
                     (Paper, Draw) => 2 + 3,
                     (Paper, Win) => 3 + 6,
-                    (Scissors, Lose) => 2 + 0,
+                    (Scissors, Lose) => 2,
                     (Scissors, Draw) => 3 + 3,
                     (Scissors, Win) => 1 + 6,
                 }
         });
-    writeln!(io::stdout(), "What would your total score be if everything goes exactly according to your strategy guide? {}", score)?;
+    writeln!(io::stdout(), "What would your total score be if everything goes exactly according to your strategy guide? {score}")?;
     Ok(())
 }
 

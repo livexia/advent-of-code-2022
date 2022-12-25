@@ -1,6 +1,7 @@
 use std::error::Error;
 use std::io::{self, Read, Write};
 
+#[allow(unused_macros)]
 macro_rules! err {
     ($($tt:tt)*) => { Err(Box::<dyn Error>::from(format!($($tt)*))) }
 }
@@ -21,7 +22,7 @@ fn main() -> Result<()> {
         if line.starts_with("move") {
             // move 3 from 9 to 4
             let mut procedure = vec![];
-            for word in line.split(" ") {
+            for word in line.split(' ') {
                 if !["move", "from", "to"].contains(&word) {
                     procedure.push(word.parse::<usize>().unwrap())
                 }
@@ -66,8 +67,8 @@ fn part1(stacks: Vec<Vec<char>>, procedures: &[Vec<usize>]) -> Result<()> {
     let result: String = stacks.iter().map(|s| s.last().unwrap()).collect();
     writeln!(
         io::stdout(),
-        "Part1: After the rearrangement procedure completes, what crate ends up on top of each stack? {}",
-        result
+        "Part1: After the rearrangement procedure completes, what crate ends up on top of each stack? {result}",
+        
     )?;
     Ok(())
 }
@@ -94,8 +95,7 @@ fn part2(stacks: Vec<Vec<char>>, procedures: &[Vec<usize>]) -> Result<()> {
     let result: String = stacks.iter().map(|s| s.last().unwrap()).collect();
     writeln!(
         io::stdout(),
-        "Part2: After the rearrangement procedure completes, what crate ends up on top of each stack? {}",
-        result
+        "Part2: After the rearrangement procedure completes, what crate ends up on top of each stack? {result}",
     )?;
     Ok(())
 }

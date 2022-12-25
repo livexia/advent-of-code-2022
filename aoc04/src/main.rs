@@ -15,8 +15,8 @@ fn main() -> Result<()> {
 
     let pairs: Vec<(Range, Range)> = input
         .lines()
-        .map(|l| l.split_once(",").unwrap())
-        .map(|(f, l)| (f.split_once("-").unwrap(), l.split_once("-").unwrap()))
+        .map(|l| l.split_once(',').unwrap())
+        .map(|(f, l)| (f.split_once('-').unwrap(), l.split_once('-').unwrap()))
         .map(|(f, l)| {
             (
                 (f.0.parse().unwrap(), f.1.parse().unwrap()),
@@ -44,8 +44,7 @@ fn part1(pairs: &[(Range, Range)]) -> Result<()> {
         .count();
     writeln!(
         io::stdout(),
-        "In how many assignment pairs does one range fully contain the other? {}",
-        count
+        "In how many assignment pairs does one range fully contain the other? {count}",
     )?;
     Ok(())
 }
@@ -54,8 +53,7 @@ fn part2(pairs: &[(Range, Range)]) -> Result<()> {
     let count = pairs.iter().filter(|(p1, p2)| overlap(p1, p2)).count();
     writeln!(
         io::stdout(),
-        "In how many assignment pairs do the ranges overlap? {}",
-        count
+        "In how many assignment pairs do the ranges overlap? {count}",
     )?;
     Ok(())
 }
@@ -85,8 +83,7 @@ fn part1_with_pair_struct(pairs: &[Pair]) -> Result<()> {
     let count = pairs.iter().filter(|p| p.fully_contain()).count();
     writeln!(
         io::stdout(),
-        "In how many assignment pairs does one range fully contain the other? {}",
-        count
+        "In how many assignment pairs does one range fully contain the other? {count}",
     )?;
     Ok(())
 }
@@ -95,8 +92,7 @@ fn part2_with_pair_struct(pairs: &[Pair]) -> Result<()> {
     let count = pairs.iter().filter(|p| p.overlap()).count();
     writeln!(
         io::stdout(),
-        "In how many assignment pairs do the ranges overlap? {}",
-        count
+        "In how many assignment pairs do the ranges overlap? {count}",
     )?;
     Ok(())
 }
@@ -110,13 +106,13 @@ impl FromStr for Pair {
     type Err = Box<dyn Error>;
 
     fn from_str(s: &str) -> Result<Pair> {
-        if let Some((first, last)) = s.split_once(",") {
-            let first: Range = if let Some((start, end)) = first.split_once("-") {
+        if let Some((first, last)) = s.split_once(',') {
+            let first: Range = if let Some((start, end)) = first.split_once('-') {
                 (start.parse()?, end.parse()?)
             } else {
                 return err!("This is not a valid pair: {:?}", s);
             };
-            let second: Range = if let Some((start, end)) = last.split_once("-") {
+            let second: Range = if let Some((start, end)) = last.split_once('-') {
                 (start.parse()?, end.parse()?)
             } else {
                 return err!("This is not a valid pair: {:?}", s);

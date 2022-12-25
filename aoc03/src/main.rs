@@ -1,6 +1,7 @@
 use std::error::Error;
 use std::io::{self, Read, Write};
 
+#[allow(unused_macros)]
 macro_rules! err {
     ($($tt:tt)*) => { Err(Box::<dyn Error>::from(format!($($tt)*))) }
 }
@@ -15,10 +16,10 @@ fn main() -> Result<()> {
         .map(|line| {
             line.bytes()
                 .map(|b| {
-                    if b < 'a' as u8 {
-                        (b as u8 - 'A' as u8 + 27) as usize
+                    if b < b'a' {
+                        (b - b'A' + 27) as usize
                     } else {
-                        (b as u8 - 'a' as u8 + 1) as usize
+                        (b - b'a' + 1) as usize
                     }
                 })
                 .collect()
@@ -52,8 +53,7 @@ fn part1(rucksacks: &[Vec<usize>]) -> Result<()> {
     }
     writeln!(
         io::stdout(),
-        "What is the sum of the priorities of those item types? {}",
-        sum
+        "What is the sum of the priorities of those item types? {sum}"
     )?;
     Ok(())
 }
@@ -80,8 +80,7 @@ fn part2(rucksacks: &[Vec<usize>]) -> Result<()> {
     }
     writeln!(
         io::stdout(),
-        "What is the sum of the priorities of those item types? {}",
-        sum
+        "What is the sum of the priorities of those item types? {sum}"
     )?;
     Ok(())
 }
@@ -89,10 +88,10 @@ fn part2(rucksacks: &[Vec<usize>]) -> Result<()> {
 fn str_to_u64(s: &str) -> u64 {
     let mut result = 0u64;
     for c in s.bytes() {
-        if c < 'a' as u8 {
-            result |= 1 << (c - 'A' as u8 + 27)
+        if c < b'a' {
+            result |= 1 << (c - b'A' + 27)
         } else {
-            result |= 1 << (c - 'a' as u8 + 1)
+            result |= 1 << (c - b'a' + 1)
         }
     }
     result
@@ -121,8 +120,7 @@ fn part1_with_bits(input: &str) -> Result<()> {
     }
     writeln!(
         io::stdout(),
-        "What is the sum of the priorities of those item types? {}",
-        sum
+        "What is the sum of the priorities of those item types? {sum}"
     )?;
     Ok(())
 }
@@ -130,15 +128,14 @@ fn part1_with_bits(input: &str) -> Result<()> {
 fn part2_with_bits(input: &str) -> Result<()> {
     let mut sum = 0;
     for lines in input.lines().collect::<Vec<_>>().chunks(3) {
-        let s1 = str_to_u64(&lines[0]);
-        let s2 = str_to_u64(&lines[1]);
-        let s3 = str_to_u64(&lines[2]);
+        let s1 = str_to_u64(lines[0]);
+        let s2 = str_to_u64(lines[1]);
+        let s3 = str_to_u64(lines[2]);
         sum += u64_bits_count(s1 & s2 & s3);
     }
     writeln!(
         io::stdout(),
-        "What is the sum of the priorities of those item types? {}",
-        sum
+        "What is the sum of the priorities of those item types? {sum}"
     )?;
     Ok(())
 }

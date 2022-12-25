@@ -1,6 +1,7 @@
 use std::error::Error;
 use std::io::{self, Read, Write};
 
+#[allow(unused_macros)]
 macro_rules! err {
     ($($tt:tt)*) => { Err(Box::<dyn Error>::from(format!($($tt)*))) }
 }
@@ -20,7 +21,7 @@ fn main() -> Result<()> {
             elves_calories[last] += line.parse::<i32>().unwrap();
         }
     }
-    elves_calories.sort_by(|a, b| b.cmp(&a));
+    elves_calories.sort_by(|a, b| b.cmp(a));
 
     part1(&elves_calories)?;
     part2(&elves_calories)?;
