@@ -36,8 +36,7 @@ fn part1(packets: &[Packet]) -> Result<usize> {
         .sum();
     writeln!(
         io::stdout(),
-        "What is the sum of the indices of those pairs? {:?}",
-        sum
+        "What is the sum of the indices of those pairs? {sum}",
     )?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(sum)
@@ -48,21 +47,20 @@ fn part2(packets: &[Packet]) -> Result<usize> {
     let mut packets: Vec<Packet> = packets.to_vec();
     packets.sort();
     let p1 = "[[2]]".parse().unwrap();
-    let index1 = match packets.binary_search(&&p1) {
+    let index1 = match packets.binary_search(&p1) {
         Err(n) => n,
         Ok(n) => n,
     };
     packets.insert(index1, p1);
     let p2 = "[[6]]".parse().unwrap();
-    let index2 = match packets.binary_search(&&p2) {
+    let index2 = match packets.binary_search(&p2) {
         Err(n) => n,
         Ok(n) => n,
     };
     let result = (index2 + 1) * (index1 + 1);
     writeln!(
         io::stdout(),
-        "What is the decoder key for the distress signal? {:?}",
-        result
+        "What is the decoder key for the distress signal? {result}",
     )?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(result)
@@ -151,7 +149,7 @@ impl FromStr for Packet {
         if let Ok(num) = s.parse() {
             return Ok(Packet::Integer(num));
         }
-        if s.starts_with("[") {
+        if s.starts_with('[') {
             let mut chars: Vec<char> = s.chars().filter(|&c| c != ' ').collect();
             let mut stack: Vec<Option<Packet>> = vec![]; // true finish packet, false un finish packet
             while let Some(c) = chars.pop() {
@@ -204,15 +202,15 @@ impl Display for Packet {
         match self {
             Packet::List(v) => {
                 write!(f, "[")?;
-                for i in 0..v.len() {
+                for (i, p) in v.iter().enumerate() {
                     if i != 0 {
                         write!(f, ",")?;
                     }
-                    write!(f, "{}", v[i])?;
+                    write!(f, "{p}")?;
                 }
                 write!(f, "]")
             }
-            Packet::Integer(n) => write!(f, "{}", n),
+            Packet::Integer(n) => write!(f, "{n}"),
         }
     }
 }

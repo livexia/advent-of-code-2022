@@ -19,7 +19,7 @@ fn main() -> Result<()> {
         .collect::<Result<Vec<Monkey>>>()?;
 
     part1(monkeys.clone())?;
-    part2(monkeys.clone())?;
+    part2(monkeys)?;
     Ok(())
 }
 
@@ -39,15 +39,15 @@ fn part1(mut monkeys: Vec<Monkey>) -> Result<()> {
     let result = result.pop().unwrap() * result.pop().unwrap();
     writeln!(
         io::stdout(),
-        "What is the level of monkey business after 20 rounds of stuff-slinging simian shenanigans? {}", 
-        result
+        "What is the level of monkey business after 20 rounds of stuff-slinging simian shenanigans? {result}", 
+        
     )?;
 
     Ok(())
 }
 
 fn part2(mut monkeys: Vec<Monkey>) -> Result<()> {
-    let div = monkeys.iter().map(|m| m.test.0).fold(1, |r, d| r * d);
+    let div = monkeys.iter().map(|m| m.test.0).product();
     for _ in 0..10000 {
         for i in 0..monkeys.len() {
             let l = monkeys[i].items.len();
@@ -63,8 +63,8 @@ fn part2(mut monkeys: Vec<Monkey>) -> Result<()> {
     let result = result.pop().unwrap() * result.pop().unwrap();
     writeln!(
         io::stdout(),
-        "What is the level of monkey business after 10000 rounds of stuff-slinging simian shenanigans? {}", 
-        result
+        "What is the level of monkey business after 10000 rounds of stuff-slinging simian shenanigans? {result}", 
+        
     )?;
 
     Ok(())
@@ -157,7 +157,7 @@ impl FromStr for Monkey {
                     .map(|i| i.parse().unwrap())
                     .collect::<VecDeque<Level>>();
                 if let Some(operation) = lines[2].strip_prefix("Operation: new = ") {
-                    let op: Vec<&str> = operation.split(" ").collect();
+                    let op: Vec<&str> = operation.split(' ').collect();
                     let op1 = match op[0] {
                         "old" => Operation::Old,
                         _ => Operation::Num(op[0].parse::<Level>().unwrap()),

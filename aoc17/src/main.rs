@@ -4,6 +4,7 @@ use std::error::Error;
 use std::io::{self, Read, Write};
 use std::time::Instant;
 
+#[allow(unused_macros)]
 macro_rules! err {
     ($($tt:tt)*) => { Err(Box::<dyn Error>::from(format!($($tt)*))) }
 }
@@ -14,7 +15,7 @@ type Coord = (i64, i64);
 fn main() -> Result<()> {
     let mut input = String::new();
     io::stdin().read_to_string(&mut input)?;
-    let jets: Vec<char> = input.trim().chars().map(|c| [c, 'v']).flatten().collect();
+    let jets: Vec<char> = input.trim().chars().flat_map(|c| [c, 'v']).collect();
 
     assert_eq!(part1(&jets, 277)?, 439);
     assert_eq!(part1(&jets, 2022)?, 3224);
@@ -26,7 +27,7 @@ fn main() -> Result<()> {
 fn part1(jets: &[char], total_rock: i64) -> Result<i64> {
     let start = Instant::now();
     let highest_rock = rock_tower(jets, total_rock)?;
-    writeln!(io::stdout(), "Part1: {}", highest_rock)?;
+    writeln!(io::stdout(), "Part1: {highest_rock}",)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(highest_rock)
 }
@@ -34,7 +35,7 @@ fn part1(jets: &[char], total_rock: i64) -> Result<i64> {
 fn part2(jets: &[char], total_rock: i64) -> Result<i64> {
     let start = Instant::now();
     let highest_rock = rock_tower(jets, total_rock)?;
-    writeln!(io::stdout(), "Part2: {}", highest_rock)?;
+    writeln!(io::stdout(), "Part2: {highest_rock}",)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(highest_rock)
 }
@@ -59,7 +60,7 @@ fn rock_tower(jets: &[char], total_rock: i64) -> Result<i64> {
         let mut rock = Rock::new(shape, highest_rock);
         rock_count += 1;
 
-        while let Some((jet_id, &movement)) = jets.next() {
+        for (jet_id, &movement) in jets.by_ref() {
             match movement {
                 '<' => {
                     let next_rock = rock.push_left();
@@ -115,6 +116,7 @@ fn rock_tower(jets: &[char], total_rock: i64) -> Result<i64> {
     Ok(highest_rock)
 }
 
+#[allow(dead_code)]
 fn print_last_ten(chamber: &HashSet<Coord>, height: i64) {
     for y in (height - 10..=height).rev() {
         for x in 0..7 {

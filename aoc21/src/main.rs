@@ -28,7 +28,7 @@ fn part1(monkeys: &[Monkey], index: &HashMap<&str, Integer>) -> Result<Integer> 
         .unwrap()
         .unwrap();
 
-    writeln!(io::stdout(), "Part1: {:?}", r)?;
+    writeln!(io::stdout(), "Part1: {r}")?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(r)
 }
@@ -47,7 +47,6 @@ fn part2(monkeys: &[Monkey], index: &HashMap<&str, Integer>) -> Result<Integer> 
     let f1 = memo.get(&m1).unwrap();
     let f2 = memo.get(&m2).unwrap();
     let humn = solve(f1, f2)?;
-    dbg!(humn);
 
     // let &humn_id = index.get("humn").unwrap();
     // let mut humn = monkeys[humn_id as usize].yell.unwrap().unwrap();
@@ -80,7 +79,7 @@ fn part2(monkeys: &[Monkey], index: &HashMap<&str, Integer>) -> Result<Integer> 
     //     mid = (left + right) / 2;
     // }
 
-    writeln!(io::stdout(), "Part2: {:?}", humn)?;
+    writeln!(io::stdout(), "Part2: {humn}",)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(humn)
 }
@@ -95,7 +94,7 @@ fn dfs(
     if part == 2 && monkeys[*root as usize].name == "humn" {
         return Formula::List(vec![]);
     }
-    if let Some(r) = memo.get(&root) {
+    if let Some(r) = memo.get(root) {
         return r.clone();
     }
     let yell = &monkeys[*root as usize].yell;
@@ -134,10 +133,10 @@ fn dfs(
 }
 
 fn solve(f1: &Formula, f2: &Formula) -> Result<Integer> {
-    eprintln!("Solve: {} = {}", f1.pretty(), f2.pretty());
+    // eprintln!("Solve: {} = {}", f1.pretty(), f2.pretty());
     match (f1, f2) {
         (Formula::List(v), Formula::Number(op1)) => {
-            if v.len() == 0 {
+            if v.is_empty() {
                 return Ok(*op1);
             }
             let op = v[1].get_op().unwrap();
@@ -175,17 +174,17 @@ fn solve(f1: &Formula, f2: &Formula) -> Result<Integer> {
                     return solve(f, &Formula::Number(op1));
                 }
             }
-            return err!("can not solve {}={}", f1.pretty(), f2.pretty());
+            err!("can not solve {}={}", f1.pretty(), f2.pretty())
         }
         (Formula::Number(_), Formula::List(_)) => solve(f2, f1),
         (Formula::List(_), Formula::List(_)) => {
-            return err!("can not solve {}={}", f1.pretty(), f2.pretty())
+            err!("can not solve {}={}", f1.pretty(), f2.pretty())
         }
         (Formula::Number(_), Formula::Number(_)) => {
-            return err!("can not solve {}={}", f1.pretty(), f2.pretty())
+            err!("can not solve {}={}", f1.pretty(), f2.pretty())
         }
-        (Formula::Operation(_), _) => return err!("can not solve {}={}", f1.pretty(), f2.pretty()),
-        (_, Formula::Operation(_)) => return err!("can not solve {}={}", f1.pretty(), f2.pretty()),
+        (Formula::Operation(_), _) => err!("can not solve {}={}", f1.pretty(), f2.pretty()),
+        (_, Formula::Operation(_)) => err!("can not solve {}={}", f1.pretty(), f2.pretty()),
     }
 }
 
@@ -235,8 +234,8 @@ impl Formula {
     fn pretty(&self) -> String {
         let mut s = String::new();
         match self {
-            Formula::Number(n) => s.push_str(&format!("{}", n)),
-            Formula::Operation(op) => s.push_str(&format!(" {} ", op)),
+            Formula::Number(n) => s.push_str(&format!("{n}")),
+            Formula::Operation(op) => s.push_str(&format!(" {op} ")),
             Formula::List(v) => {
                 if v.is_empty() {
                     s.push_str("humn");
@@ -259,12 +258,12 @@ impl Formula {
     fn _simplify(self) -> Formula {
         // not working
         match &self {
-            Formula::Number(_) => return self,
-            Formula::Operation(_) => return self,
+            Formula::Number(_) => self,
+            Formula::Operation(_) => self,
             Formula::List(v) => {
                 let l = v.len();
                 if l == 0 {
-                    return self;
+                    self
                 } else if l == 3 {
                     let f1 = v[0].clone();
                     let f2 = v[2].clone();
@@ -286,7 +285,7 @@ impl Formula {
                                     Formula::List(inner_v_v) => Formula::List(vec![
                                         Formula::Number(op1),
                                         Formula::Operation(op),
-                                        Formula::List(inner_v_v.clone()),
+                                        Formula::List(inner_v_v),
                                     ]),
                                 })
                                 .collect(),
@@ -300,7 +299,7 @@ impl Formula {
                                     Formula::Number(op1) => Formula::Number(calc(&op, op1, op2)),
                                     Formula::Operation(_) => f.clone(),
                                     Formula::List(inner_v_v) => Formula::List(vec![
-                                        Formula::List(inner_v_v.clone()),
+                                        Formula::List(inner_v_v),
                                         Formula::Operation(op),
                                         Formula::Number(op2),
                                     ]),
@@ -325,12 +324,13 @@ impl Formula {
         }
     }
 
+    #[allow(dead_code)]
     fn calc(&self, unknow: Integer) -> Integer {
         match self {
             Formula::Number(n) => *n,
             Formula::Operation(_) => unreachable!(),
             Formula::List(v) => {
-                if v.len() == 0 {
+                if v.is_empty() {
                     return unknow;
                 }
                 let op1 = v[0].calc(unknow);
@@ -349,6 +349,7 @@ enum Yell {
 }
 
 impl Yell {
+    #[allow(dead_code)]
     fn unwrap(&self) -> Option<Integer> {
         match self {
             Yell::Number(n) => Some(*n),
@@ -386,7 +387,7 @@ fn parse_input(input: &str) -> Result<(Vec<Monkey>, HashMap<&str, Integer>)> {
     for line in input.lines() {
         if let Some((name, yell)) = line.trim().split_once(": ") {
             let id = get_moneky_id(&mut index, &mut result, &mut max_id, name);
-            let yell = yell.split(" ").collect::<Vec<_>>();
+            let yell = yell.split(' ').collect::<Vec<_>>();
             if yell.len() == 1 {
                 result[id as usize] = Some(Monkey {
                     name: name.to_string(),
@@ -394,7 +395,7 @@ fn parse_input(input: &str) -> Result<(Vec<Monkey>, HashMap<&str, Integer>)> {
                 });
             } else if yell.len() == 3 {
                 let id1 = get_moneky_id(&mut index, &mut result, &mut max_id, yell[0]);
-                let mut op = yell[1].trim().chars().next().unwrap();
+                let op = yell[1].trim().chars().next().unwrap();
                 let id2 = get_moneky_id(&mut index, &mut result, &mut max_id, yell[2]);
                 if !['+', '-', '*', '/'].contains(&op) {
                     return err!("not a valid monkey yell: {}", line);

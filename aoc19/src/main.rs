@@ -28,7 +28,7 @@ fn part1(blueprints: &mut [Blueprint]) -> Result<u16> {
     for b in blueprints {
         result += b.execute(0, State::new(), &mut HashSet::new(), 24) * b.id;
     }
-    writeln!(io::stdout(), "Part1: {:?}", result)?;
+    writeln!(io::stdout(), "Part1: {result}",)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(result)
 }
@@ -41,7 +41,7 @@ fn part2(blueprints: &mut [Blueprint]) -> Result<u16> {
         .iter_mut()
         .map(|b| b.execute(0, State::new(), &mut HashSet::new(), 32))
         .product();
-    writeln!(io::stdout(), "Part2: {:?}", result)?;
+    writeln!(io::stdout(), "Part2: {result}",)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(result)
 }
@@ -79,7 +79,7 @@ impl State {
         }
     }
 
-    fn to_key(&self, time: u16) -> Key {
+    fn key(&self, time: u16) -> Key {
         (
             self.robots[0],
             self.robots[1],
@@ -115,7 +115,7 @@ impl Blueprint {
             return 0;
         }
         state = self.trim_goods(state, time, time_limit);
-        let key = state.to_key(time);
+        let key = state.key(time);
         memo.insert(key);
         let (r1, r2, r3, r4) = (
             self.can_build_geode_robot(&state),
@@ -142,7 +142,7 @@ impl Blueprint {
         let r = new_state
             .into_iter()
             .map(|s| {
-                let key = s.to_key(time + 1);
+                let key = s.key(time + 1);
                 if memo.contains(&key) {
                     0
                 } else {
@@ -163,7 +163,7 @@ impl Blueprint {
     }
 
     fn build_geode_robot(&self, state: &State) -> State {
-        let mut state = state.clone();
+        let mut state = *state;
         state.goods[0] -= self.geode_cost.0;
         state.goods[2] -= self.geode_cost.1;
         state.robots[3] += 1;
@@ -171,7 +171,7 @@ impl Blueprint {
     }
 
     fn build_obsidian_robot(&self, state: &State) -> State {
-        let mut state = state.clone();
+        let mut state = *state;
         state.goods[0] -= self.obsidian_cost.0;
         state.goods[1] -= self.obsidian_cost.1;
         state.robots[2] += 1;
@@ -179,14 +179,14 @@ impl Blueprint {
     }
 
     fn build_clay_robot(&self, state: &State) -> State {
-        let mut state = state.clone();
+        let mut state = *state;
         state.goods[0] -= self.clay_cost;
         state.robots[1] += 1;
         state
     }
 
     fn build_ore_robot(&self, state: &State) -> State {
-        let mut state = state.clone();
+        let mut state = *state;
         state.goods[0] -= self.ore_cost;
         state.robots[0] += 1;
         state

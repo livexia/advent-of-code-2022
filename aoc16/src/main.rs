@@ -26,7 +26,7 @@ fn part1(valves: &[Valve], aa_id: usize) -> Result<usize> {
     let mut memorization = vec![vec![usize::MAX; valves.len()]; valves.len()];
     for i in 0..valves.len() {
         for j in 0..valves.len() {
-            shortest_dis_bfs(&mut memorization, &valves, i, j);
+            shortest_dis_bfs(&mut memorization, valves, i, j);
         }
     }
     let closed: Vec<usize> = valves
@@ -49,7 +49,7 @@ fn part1(valves: &[Valve], aa_id: usize) -> Result<usize> {
         &mut memo,
     );
 
-    writeln!(io::stdout(), "Part1: {:?}", total_pressure)?;
+    writeln!(io::stdout(), "Part1: {total_pressure}",)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(total_pressure)
 }
@@ -60,7 +60,7 @@ fn part2(valves: &[Valve], aa_id: usize) -> Result<usize> {
     let mut memorization = vec![vec![usize::MAX; valves.len()]; valves.len()];
     for i in 0..valves.len() {
         for j in 0..valves.len() {
-            shortest_dis_bfs(&mut memorization, &valves, i, j);
+            shortest_dis_bfs(&mut memorization, valves, i, j);
         }
     }
     let mut closed: Vec<usize> = valves
@@ -86,17 +86,12 @@ fn part2(valves: &[Valve], aa_id: usize) -> Result<usize> {
         &mut memo2,
     );
 
-    writeln!(io::stdout(), "Part2: {:?}", total_pressure)?;
+    writeln!(io::stdout(), "Part2: {total_pressure}",)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(total_pressure)
 }
 
-fn shortest_dis_bfs(
-    memorization: &mut Vec<Vec<usize>>,
-    valves: &[Valve],
-    start: usize,
-    dest: usize,
-) {
+fn shortest_dis_bfs(memorization: &mut [Vec<usize>], valves: &[Valve], start: usize, dest: usize) {
     if memorization[start][dest] != usize::MAX {
         return;
     }
@@ -145,7 +140,7 @@ fn dp(
         .iter()
         .map(|&next| {
             if opened & (1 << next) == 0 {
-                let mut new_opend = opened.clone();
+                let mut new_opend = opened;
                 new_opend |= 1 << next;
                 let d = memorization[id][next] + 1;
                 if time + d > time_limit {
@@ -234,45 +229,43 @@ fn dp_part2(
                     memo,
                     memo2,
                 ));
+            } else if d0 + time.0 > time_limit && d1 + time.1 > time_limit {
+                result = result.max(
+                    total_pressure.0
+                        + total_pressure.1
+                        + pressure.0 * (time_limit - time.0)
+                        + pressure.1 * (time_limit - time.1),
+                )
             } else {
-                if d0 + time.0 > time_limit && d1 + time.1 > time_limit {
-                    result = result.max(
-                        total_pressure.0
-                            + total_pressure.1
-                            + pressure.0 * (time_limit - time.0)
-                            + pressure.1 * (time_limit - time.1),
+                let (total_pressure, pressure, time, d0, next0) = if d0 + time.0 > d1 + time.1 {
+                    (
+                        rev_tuple(total_pressure),
+                        rev_tuple(pressure),
+                        rev_tuple(time),
+                        d1,
+                        next1,
                     )
                 } else {
-                    let (total_pressure, pressure, time, d0, next0) = if d0 + time.0 > d1 + time.1 {
-                        (
-                            rev_tuple(total_pressure),
-                            rev_tuple(pressure),
-                            rev_tuple(time),
-                            d1,
-                            next1,
-                        )
-                    } else {
-                        (total_pressure, pressure, time, d0, next0)
-                    };
-                    let mut new_opened = opened.clone();
-                    new_opened |= 1 << next0;
-                    result = result.max(
-                        total_pressure.1
-                            + pressure.1 * (time_limit - time.1)
-                            + dp(
-                                memorization,
-                                closed,
-                                new_opened,
-                                valves,
-                                next0,
-                                total_pressure.0 + pressure.0 * d0,
-                                pressure.0 + valves[next0].flow_rate,
-                                time.0 + d0,
-                                time_limit,
-                                memo2,
-                            ),
-                    );
-                }
+                    (total_pressure, pressure, time, d0, next0)
+                };
+                let mut new_opened = opened;
+                new_opened |= 1 << next0;
+                result = result.max(
+                    total_pressure.1
+                        + pressure.1 * (time_limit - time.1)
+                        + dp(
+                            memorization,
+                            closed,
+                            new_opened,
+                            valves,
+                            next0,
+                            total_pressure.0 + pressure.0 * d0,
+                            pressure.0 + valves[next0].flow_rate,
+                            time.0 + d0,
+                            time_limit,
+                            memo2,
+                        ),
+                );
             }
         }
     }
@@ -344,11 +337,7 @@ fn parse_input(input: &str) -> Result<(Vec<Valve>, usize, HashMap<&str, usize>)>
         }
     }
     if valves.iter().all(|v| v.is_some()) {
-        return Ok((
-            valves.into_iter().filter_map(|v| v).collect(),
-            aa_id,
-            valves_index,
-        ));
+        return Ok((valves.into_iter().flatten().collect(), aa_id, valves_index));
     }
     err!("not a valid input")
 }

@@ -17,7 +17,7 @@ fn main() -> Result<()> {
 
     let cubes = input
         .lines()
-        .map(|l| from_str(l))
+        .map(from_str)
         .collect::<Result<Vec<Vertex>>>()?;
     assert_eq!(cubes.len(), input.lines().count());
 
@@ -30,7 +30,7 @@ fn main() -> Result<()> {
 fn part1(cubes: &[Vertex]) -> Result<i32> {
     let start = Instant::now();
     let result = surface_area(cubes);
-    writeln!(io::stdout(), "Part1: {}", result)?;
+    writeln!(io::stdout(), "Part1: {result}",)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(result)
 }
@@ -41,19 +41,18 @@ fn part2(cubes: &[Vertex]) -> Result<i32> {
     let vertices: HashSet<Vertex> = HashSet::from_iter(
         cubes
             .iter()
-            .map(|&c| adjacent_vertices(c))
-            .flatten()
+            .flat_map(|&c| adjacent_vertices(c))
             .filter(|p| !cubes_set.contains(p)),
     );
-    let range = ranges(&cubes);
-    let mut result = surface_area(&cubes);
+    let range = ranges(cubes);
+    let mut result = surface_area(cubes);
     let mut visited = HashMap::new();
     for vertex in vertices {
         if !visited.contains_key(&vertex) {
             result -= surface_area(&dfs(&cubes_set, vertex, &mut visited, range));
         }
     }
-    writeln!(io::stdout(), "Part2: {}", result)?;
+    writeln!(io::stdout(), "Part2: {result}",)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(result)
 }
@@ -85,7 +84,7 @@ fn dfs(
             }
         } else {
             let r = dfs(cubes, next, visited, range);
-            if r.len() == 0 {
+            if r.is_empty() {
                 result.clear();
                 break;
             } else {
@@ -93,7 +92,7 @@ fn dfs(
             }
         }
     }
-    if result.len() == 0 {
+    if result.is_empty() {
         visited.insert(vertex, 0);
     }
     result
@@ -102,10 +101,10 @@ fn dfs(
 fn part2_with_flood_fill(cubes: &[Vertex]) -> Result<i32> {
     let start = Instant::now();
     let cubes_set: HashSet<Vertex> = HashSet::from_iter(cubes.iter().cloned());
-    let range = ranges(&cubes);
+    let range = ranges(cubes);
     let result = flood(range.0, &cubes_set, range);
 
-    writeln!(io::stdout(), "Part2 with flood fill: {}", result)?;
+    writeln!(io::stdout(), "Part2 with flood fill: {result}",)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(result)
 }
@@ -116,14 +115,12 @@ fn flood(start: Vertex, cubes: &HashSet<Vertex>, range: (Vertex, Vertex)) -> i32
     let mut visited = HashSet::new();
     stack.push(start);
     while let Some(cur) = stack.pop() {
-        if visited.insert(cur) {
-            if in_range(range, cur) {
-                for next in adjacent_vertices(cur) {
-                    if cubes.contains(&next) {
-                        sum += 1;
-                    } else {
-                        stack.push(next);
-                    }
+        if visited.insert(cur) && in_range(range, cur) {
+            for next in adjacent_vertices(cur) {
+                if cubes.contains(&next) {
+                    sum += 1;
+                } else {
+                    stack.push(next);
                 }
             }
         }
@@ -139,8 +136,7 @@ fn surface_area(cubes: &[Vertex]) -> i32 {
     let mut result = l as i32 * 6;
     for i in 0..l {
         let c1 = cubes[i];
-        for j in i + 1..l {
-            let c2 = cubes[j];
+        for &c2 in cubes.iter().skip(i + 1) {
             if connected(c1, c2) {
                 result -= 2;
             }
@@ -194,7 +190,7 @@ fn dis(p1: Vertex, p2: Vertex) -> Coord {
 }
 
 fn from_str(s: &str) -> Result<Vertex> {
-    let coords: Vec<&str> = s.trim().split(",").collect();
+    let coords: Vec<&str> = s.trim().split(',').collect();
     if coords.len() == 3 {
         return Ok((coords[0].parse()?, coords[1].parse()?, coords[2].parse()?));
     }

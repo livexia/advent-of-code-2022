@@ -24,7 +24,7 @@ fn part1(grid: &[Vec<char>]) -> Result<usize> {
     // bfs
     let (x, y) = find_char(grid, 'S').unwrap();
     let result = bfs(grid, x, y)?;
-    writeln!(io::stdout(), "Part1: {}", result)?;
+    writeln!(io::stdout(), "Part1: {result}",)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(result)
 }
@@ -44,7 +44,7 @@ fn part2(grid: &[Vec<char>]) -> Result<usize> {
     for (x, y) in possible {
         result = result.min(bfs(grid, x, y).ok().unwrap_or(usize::MAX));
     }
-    writeln!(io::stdout(), "Part2: {}", result)?;
+    writeln!(io::stdout(), "Part2: {result}",)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(result)
 }
@@ -53,7 +53,7 @@ fn part2_with_reverse_bfs(grid: &[Vec<char>]) -> Result<usize> {
     let start = Instant::now();
     let (x, y) = find_char(grid, 'E').unwrap();
     let result = reverse_bfs(grid, x, y)?;
-    writeln!(io::stdout(), "Part2 with reverse bfs: {}", result)?;
+    writeln!(io::stdout(), "Part2 with reverse bfs: {result}",)?;
     writeln!(io::stdout(), "> Time elapsed is: {:?}", start.elapsed())?;
     Ok(result)
 }

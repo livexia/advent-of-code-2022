@@ -1,3 +1,4 @@
+use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::error::Error;
 use std::io::{self, Read, Write};
@@ -22,9 +23,9 @@ fn with_stack(input: &str) -> Result<()> {
     sizes.insert("/".to_string(), 0);
     let mut pwd = vec![];
     for line in input.lines() {
-        if line.starts_with("$") {
+        if line.starts_with('$') {
             if line.starts_with("$ cd") {
-                let dir_name = line.split(" ").last().unwrap();
+                let dir_name = line.split(' ').last().unwrap();
                 if dir_name == ".." {
                     pwd.pop();
                 } else if dir_name == "." {
@@ -43,10 +44,10 @@ fn with_stack(input: &str) -> Result<()> {
                 sub_dirs
                     .entry(path)
                     .or_insert(vec![])
-                    .push(line.split_once(" ").unwrap().1);
+                    .push(line.split_once(' ').unwrap().1);
             } else {
                 *sizes.entry(path).or_insert(0) +=
-                    line.split_once(" ").unwrap().0.parse::<usize>().unwrap();
+                    line.split_once(' ').unwrap().0.parse::<usize>().unwrap();
             }
         }
     }
@@ -81,7 +82,7 @@ fn compute_dir_size(
     if let Some(dirs) = sub_dirs.get(path) {
         *sizes.entry(path.to_string()).or_insert(0) += dirs
             .iter()
-            .map(|dir| compute_dir_size(sub_dirs, sizes, &format!("{}/{}", path, dir)))
+            .map(|dir| compute_dir_size(sub_dirs, sizes, &format!("{path}/{dir}")))
             .sum::<usize>()
     }
     *sizes.get(path).unwrap()
@@ -91,9 +92,9 @@ fn with_tree(input: &str) -> Result<()> {
     let mut dirs = Dirs::new();
     let mut cur_dir_index = 0;
     for line in input.lines() {
-        if line.starts_with("$") {
+        if line.starts_with('$') {
             if line.starts_with("$ cd") {
-                let next_dir_name = line.split(" ").last().unwrap();
+                let next_dir_name = line.split(' ').last().unwrap();
                 if next_dir_name == "/" {
                     cur_dir_index = 0;
                 } else if next_dir_name == ".." {
@@ -117,17 +118,15 @@ fn with_tree(input: &str) -> Result<()> {
         } else {
             let id = dirs.dirs[cur_dir_index].id;
             if line.starts_with("dir") {
-                if let Some(name) = line.split(" ").last() {
+                if let Some(name) = line.split(' ').last() {
                     dirs.add_dir(id, name.to_string());
                 } else {
                     return err!("not a vaild ls out put for sub dir: {:?}", line);
                 }
+            } else if let Some((size, name)) = line.split_once(' ') {
+                dirs.add_file(id, name.to_string(), size.parse().unwrap());
             } else {
-                if let Some((size, name)) = line.split_once(" ") {
-                    dirs.add_file(id, name.to_string(), size.parse().unwrap());
-                } else {
-                    return err!("not a vaild ls out put for file: {:?}", line);
-                }
+                return err!("not a vaild ls out put for file: {:?}", line);
             }
         }
     }
@@ -181,7 +180,7 @@ impl Dirs {
     }
 
     fn get_size(&self, id: usize) -> usize {
-        let files_size: usize = self.dirs[id].files.iter().map(|(_, f)| f).sum();
+        let files_size: usize = self.dirs[id].files.values().sum();
         let sub_dirs_size: usize = self.dirs[id]
             .sub_dir
             .iter()
@@ -192,8 +191,8 @@ impl Dirs {
 
     fn add_dir(&mut self, id: usize, name: String) {
         let dir = &mut self.dirs[id];
-        if !dir.table.contains_key(&name) {
-            dir.table.insert(name.to_string(), self.next_index);
+        if let Entry::Vacant(e) = dir.table.entry(name) {
+            e.insert(self.next_index);
             dir.sub_dir.push(self.next_index);
             self.dirs.push(Dir::new(self.next_index, id));
             self.next_index += 1;
@@ -202,9 +201,7 @@ impl Dirs {
 
     fn add_file(&mut self, id: usize, name: String, size: usize) {
         let dir = &mut self.dirs[id];
-        if !dir.files.contains_key(&name) {
-            dir.files.insert(name, size);
-        }
+        dir.files.entry(name).or_insert(size);
     }
 }
 
